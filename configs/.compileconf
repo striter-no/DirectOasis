@@ -1,0 +1,27 @@
+[variables]
+file = clarg.file
+mainDir = ./code/tests
+sourcedDir = ./code/source
+headersDir = ./code/src/include
+
+[compiler]
+mode = g++
+standart = c++23
+warnings = false
+headersDir = variables.headersDir
+optimize = 3
+runAfterCompiling = true
+outputDir = ./out
+
+[dependencies]
+file = variables.file
+sourceDir = variables.sourcedDir
+mainDir = variables.mainDir
+
+[libraries]
+dllsToLink = (pthread, boost_system, boost_thread)
+# dllsToLink = (GL, glfw, GLEW, wayland-client)
+
+[env]
+# vars = {LIBGL_ALWAYS_SOFTWARE:true, GALLIUM_DRIVER:llvmpipe}
+# vars = {MESA_GL_VERSION_OVERRIDE:3.1}

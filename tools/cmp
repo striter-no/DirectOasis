@@ -1,0 +1,372 @@
+#!/usr/bin/env python3
+
+import shutil as sht
+import os
+from colorama import Fore
+from sys import argv
+
+
+def processList(value: str) -> list[str]:
+    return [i.strip() for i in value[1:-1].split(',')]
+
+def processDict(value: str) -> list[str]:
+    return [f"{i.strip()[:i.strip().index(':')]}={i.strip()[i.strip().index(':')+1:]}" for i in value[1:-1].split(',')]
+
+def processListOrStr(value: str) -> list[str]:
+    if "none" in value:
+        return []
+    if '(' in value:
+        return processList(value)
+    if '{' in value:
+        return processDict(value)
+    return [value]
+
+def compile(
+    mode: str,
+    standart: str,
+    optimize: int,
+    warnings: str,
+    mainFile: str,
+    filesToLink: list[str],
+    libsToLink: list[str],
+
+    pathToSrc: str,
+    pathToHeaders: str,
+    pathToLibs: str,
+    pathToSource: str
+) -> str:
+
+    print(f"{Fore.GREEN}[INFO] Compiling {mainFile} from {pathToSource}...{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Standart: {standart}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Optimize: {optimize}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Warnings: {warnings}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Main file: {mainFile}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Files to link: {filesToLink}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Libs to link: {libsToLink}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Path to src: {pathToSrc}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Path to headers: {pathToHeaders}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Path to libs: {pathToLibs}{Fore.RESET}")
+    print(f"{Fore.CYAN}[INFO-NESTED] Path to source: {pathToSource}{Fore.RESET}")
+
+    command: str = f"{mode} -std={standart}"
+    
+    if optimize > 0:
+        command += f" -O{optimize}"
+    
+    command += f" -c {pathToSource}/{mainFile}"
+    if len(filesToLink) > 0:
+        command += " ".join([file for file in filesToLink])
+    elif pathToSrc != "none":
+        for root, dirs, files in os.walk(pathToSrc):
+            for file in files:
+                if file.endswith(".cpp"):
+                    command += f" {root}/{file}"
+
+    command += f" -I {pathToHeaders}"
+
+    if warnings == 'all':
+        command += " -Wall"
+    elif warnings == 'false':
+        command += " -w"
+    elif warnings == 'true':
+        pass
+
+    print(f"{Fore.YELLOW}[COMPILE] Executing command: {Fore.BLUE}{command} {Fore.RESET}\n")
+    
+
+    exCode = os.system(command)
+    os.system("mv *.o ./tmp")
+    if exCode!= 0:
+        print(f"{Fore.RED}[ERROR] Compilation failed with code {exCode}{Fore.RESET}")
+        exit(exCode)
+
+    command = f"{mode}"
+
+    if optimize > 0:
+        command += f" -O{optimize}"
+
+    command += f" -o {mainFile.replace('.cpp', '')} ./tmp/{mainFile.replace('.cpp', '.o')}"
+    if len(filesToLink) > 0:
+        command += " ".join(["./tmp/"+os.path.basename(file).replace('.cpp', '.o') for file in filesToLink])
+    elif pathToSrc != "none":
+        for root, dirs, files in os.walk(pathToSrc):
+            for file in files:
+                if file.endswith(".cpp"):
+                    command += f" ./tmp/{os.path.basename(file).replace('.cpp', '.o')}"
+    
+    if pathToLibs != "none":
+        command += f" -L {pathToLibs}"
+        command += ' ' + " ".join([f"-l{lib}" for lib in libsToLink])
+    else:
+        print(f"{Fore.LIGHTMAGENTA_EX}[INFO] Getting libraries from system default path{Fore.RESET}")
+        command += ' ' + " ".join([f"-l{lib}" for lib in libsToLink])
+
+    print(f"{Fore.YELLOW}[LINK] Executing command: {Fore.BLUE}{command} {Fore.RESET}\n")
+
+    exCode = os.system(command)
+    if exCode!= 0:
+        print(f"{Fore.RED}[ERROR] Linking failed with code {exCode}{Fore.RESET}")
+        exit(exCode)
+
+    os.system("rm -f *.o")
+
+    return mainFile.replace('.cpp', '')
+
+class Scope:
+    def __init__(self, name: str, data: (None | str)) -> None:
+        self.data: dict[str, str] = {}
+        self.name = name
+        
+        if data is None:
+            return
+
+        self.rawdata = data.strip()
+
+        for line in data.split('\n'):
+            if line.startswith('#'):
+                continue
+            if line.startswith('//'):
+                continue
+            if line.find('=') == -1:
+                continue
+
+            key, value = line.split('=')
+
+            key = key.strip()
+            value = value.strip()
+
+            self.data[key] = value
+
+        Processor(self)
+    
+    def __str__(self) -> str:
+        out: str = f'Scope {self.name}\n'
+        for key, value in self.data.items():
+            out += f"{key} = {value}\n"
+        
+        return out
+
+class ConfigFile:
+    def __init__(self, path: str) -> None:
+        self.data: dict[str, Scope] = {}
+
+        with open(path, 'r') as f:
+            rawData = f.read()
+        
+        print(f"{Fore.GREEN}[INFO] Loading config file {path}...{Fore.RESET}")
+
+        for line in rawData.split('\n'):
+            if line.startswith('#'):
+                continue
+            if line.startswith('//'):
+                continue
+            if not line:
+                continue
+
+            if '[' == line[0]:
+                argName: str = line[1:-1]
+                
+                if rawData[rawData.index(line)+1:].find('[') != -1:
+                    self.data[argName] = Scope(
+                        argName,
+                        rawData[
+                            rawData.index(']', rawData.index(line))+1:
+                            rawData.index('[', rawData.index(line)+1)
+                        ]
+                    )
+                else:
+                    self.data[argName] = Scope(
+                        argName,
+                        rawData[
+                            rawData.index(line)+len(line):
+                        ]
+                    )
+
+class System:
+    def __init__(self) -> None:
+        self.variablesScope: Scope = Scope("variablesScope", None)
+        self.compilerScope: Scope = Scope("compilerScope", None)
+        self.dependenciesScope: Scope = Scope("dependenciesScope", None)
+        self.releaseScope: Scope = Scope("releaseScope", None)
+        self.librariesScope: Scope = Scope("librariesScope", None)
+        self.clarg: Scope = Scope("clarg", None)
+        self.envScope: Scope = Scope("envScope", None)
+
+        self.compilerScope.data["mode"] = "none"
+        self.compilerScope.data["standart"] = "none"
+        self.compilerScope.data["outputDir"] = "none"
+        self.compilerScope.data["warnings"] = "true"
+        self.compilerScope.data["runAfterCompiling"] = "false"
+        self.compilerScope.data["optimize"] = "0"
+
+        self.dependenciesScope.data["sourceDir"] = "none"
+        self.dependenciesScope.data["file"] = "none"
+        self.dependenciesScope.data["mainDir"] = "none"
+        self.dependenciesScope.data["confPaths"] = "none"
+        self.dependenciesScope.data["fileLink"] = "none"
+
+        self.releaseScope.data["archiveMethod"] = "tar"
+        self.releaseScope.data["dllsToInclude"] = "none"
+        self.releaseScope.data["stlsToInclude"] = "none"
+        self.releaseScope.data["exesToInclude"] = "none"
+        self.releaseScope.data["assetsToInclude"] = "none"
+
+        self.librariesScope.data["dllsToLink"] = "none"
+        self.librariesScope.data["stlsToLink"] = "none"
+        self.librariesScope.data["libDir"] = "none"
+
+        self.envScope.data["vars"] = "none"
+
+        name = ""
+        value = ""
+
+        for i in range(len(argv)):
+            word = argv[i]
+            if '--' == word[:2]:
+                name = word[2:word.index('=')]
+                value = word[word.index('=')+1:]
+                if value[0]=='"':
+                    nword = argv[i+1]
+                    while nword[-1] != '"':
+                        value += " " + nword
+                        i += 1
+                        if i+1 < len(argv):
+                            nword = argv[i+1]
+                self.clarg.data[name] = value
+
+    def smallProcess(self, scope: Scope) -> Scope:
+        for arg in scope.data.keys():
+            # print(arg, scope.data[arg])
+            for var in self.variablesScope.data.keys():
+                scope.data[arg] = scope.data[arg].replace(
+                    f'variables.{var}',
+                    self.variablesScope.data[var]
+                )
+            for var in self.clarg.data.keys():
+                scope.data[arg] = scope.data[arg].replace(
+                    f'clarg.{var}',
+                    self.clarg.data[var]
+                )
+        return scope
+
+    def process(self) -> None:
+        for arg in self.variablesScope.data.keys():
+            for var in self.clarg.data.keys():
+                self.variablesScope.data[arg] = self.variablesScope.data[arg] \
+                    .replace(
+                        f'clarg.{var}',
+                        self.clarg.data[var]
+                    )
+                
+        self.compilerScope = self.smallProcess(self.compilerScope)
+        self.dependenciesScope = self.smallProcess(self.dependenciesScope)
+        self.releaseScope = self.smallProcess(self.releaseScope)
+        self.librariesScope = self.smallProcess(self.librariesScope)
+        self.envScope = self.smallProcess(self.envScope)
+
+    def linkOthers(self) -> None:
+        if self.dependenciesScope.data["confPaths"] != "none":
+            
+            for confPath in processListOrStr(self.dependenciesScope.data["confPaths"]):
+                conf = ConfigFile(confPath)
+                for scope in conf.data.keys():
+                    conf.data[scope]
+
+    def run(self) -> None:
+        
+        binName = self.clarg.data["file"].replace('.cpp', '')
+
+        if self.clarg.data["only-run"] == "true" and os.path.exists(f"{self.compilerScope.data['outputDir']}/{binName}"):
+            
+            print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])}{self.compilerScope.data['outputDir']}/{binName}"}{Fore.RESET}")
+            print(f"-- starting {binName} ...")
+            code = os.system(f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])} {self.compilerScope.data['outputDir']}/{binName}")
+            if code!= 0:
+                print(f"-- {binName} finished with code {code}")
+            else:
+                print(f"-- {binName} finished")
+            
+            return
+
+        os.makedirs("tmp", exist_ok=True)
+        # os.system("clear")
+        
+        compile(
+            self.compilerScope.data["mode"],
+            self.compilerScope.data["standart"],
+            int(self.compilerScope.data["optimize"]),
+            self.compilerScope.data["warnings"],
+            self.dependenciesScope.data["file"],
+            processListOrStr(self.dependenciesScope.data["fileLink"]),
+            processListOrStr(self.librariesScope.data["stlsToLink"]) + 
+                processListOrStr(self.librariesScope.data["dllsToLink"]),
+            self.dependenciesScope.data["sourceDir"],
+            self.compilerScope.data["headersDir"],
+            self.librariesScope.data["libDir"],
+            self.dependenciesScope.data["mainDir"]
+        )
+        if self.compilerScope.data["outputDir"] != "none":
+            if os.path.exists(f"{self.compilerScope.data["outputDir"]}/{binName}"):
+                os.remove(f"{self.compilerScope.data['outputDir']}/{binName}")
+            sht.move(f"./{binName}", f"{self.compilerScope.data["outputDir"]}")
+
+        if self.compilerScope.data["runAfterCompiling"] == "true":
+            print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])}{self.compilerScope.data['outputDir']}/{binName}"}{Fore.RESET}")
+            print(f"-- starting {binName} ...")
+            code = os.system(f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])} {self.compilerScope.data['outputDir']}/{binName}")
+            if code!= 0:
+                print(f"-- {binName} finished with code {code}")
+            else:
+                print(f"-- {binName} finished")
+        
+        if self.releaseScope.data["exesToInclude"] != "none":
+            os.makedirs("release", exist_ok=True)
+            for exe in processListOrStr(self.releaseScope.data["exesToInclude"]):
+                sht.copy(exe, "release")
+            for dll in processListOrStr(self.releaseScope.data["dllsToInclude"]):
+                sht.copy(dll, "release")
+            for stl in processListOrStr(self.releaseScope.data["stlsToInclude"]):
+                sht.copy(stl, "release")
+            for assets in processListOrStr(self.releaseScope.data["assetsToInclude"]):
+                sht.copy(assets, "release")
+            
+            sht.make_archive("release", system.releaseScope.data["archiveMethod"], "./release")
+            os.removedirs("./release")
+
+        os.system("rm -rf ./tmp")
+
+
+class Processor:
+    def __init__(self, scope: (None | Scope)) -> None:
+        if scope is None:
+            return
+
+        global system
+        
+        match scope.name:
+            case 'variables':
+                system.variablesScope.data.update(scope.data)
+            case 'compiler':
+                system.compilerScope.data.update(scope.data)
+            case 'dependencies':
+                system.dependenciesScope.data.update(scope.data)
+            case 'release':
+                system.releaseScope.data.update(scope.data)
+            case 'libraries':
+                system.librariesScope.data.update(scope.data)
+            case 'env':
+                system.envScope.data.update(scope.data)
+            case _:
+                raise Exception(f'Unknown scope: {scope.name}')
+        
+        system.process()
+        system.linkOthers()
+
+
+if __name__ == '__main__':
+    system = System()
+    with open(f'{os.path.dirname(__file__)}/config.where') as f:
+        path = f.read().strip()
+    config = ConfigFile(path)
+
+    system.run()
