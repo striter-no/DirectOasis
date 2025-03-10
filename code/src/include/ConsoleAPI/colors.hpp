@@ -49,4 +49,12 @@ namespace colors{
         const std::string cyan = "\033[106m";
         const std::string gray = "\033[107m";
     } LightBack;
+
+    std::string rgb_fore(int r, int g, int b){
+        return "\033[38;2;" + std::to_string(r) + ";" + std::to_string(g) + ";" + std::to_string(b) + "m";
+    }
+
+    std::string rgb_back(int r, int g, int b){
+        return "\033[48;2;" + std::to_string(r) + ";" + std::to_string(g) + ";" + std::to_string(b) + "m";
+    }
 }

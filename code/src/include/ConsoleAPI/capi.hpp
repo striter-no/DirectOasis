@@ -4,7 +4,14 @@
 #include <utils/vector.hpp>
 #include <utils/string.hpp>
 
-#include <locale>
+#include "colors.hpp"
+#include "terminal.hpp"
+
+std::wstring conv(std::string str){
+    std::wstring result;
+    result.append(str.begin(), str.end());
+    return result;
+}
 
 struct Pixel {
     std::wstring data = L" ";
@@ -20,8 +27,8 @@ struct Pixel {
 };
 
 class Console{
-        int width = 1, height = 1;
-
+        Terminal terminal;
+        
         std::vector<std::vector<Pixel>> data;
         Pixel bg_pixel;
     
@@ -38,12 +45,33 @@ class Console{
         }
 
     public:
+        int width = 1, height = 1;
 
         Console(
             int width,
             int height,
-            Pixel bg_pixel
-        ): width(width), height(height), bg_pixel(bg_pixel) {}
+            Pixel bg_pixel,
+            bool vt = true
+        ): width(width), height(height), bg_pixel(bg_pixel) {
+            terminal.startANSI();
+            setup();
+            ini_fill(width, height);
+
+            if (vt)
+                terminal.enableVT();
+        }
+
+        Console(
+            Pixel bg_pixel,
+            bool vt = true
+        ): width(terminal.getSize().first - 5), height(terminal.getSize().second - 5), bg_pixel(bg_pixel) {
+            terminal.startANSI();
+            setup();
+            ini_fill(width, height);
+
+            if (vt)
+                terminal.enableVT();
+        }
 
         void setup(){
             #ifdef _WIN32
@@ -61,7 +89,7 @@ class Console{
 
         void clear(){
             ini_fill(width, height);
-            std::wcout << "\033[H\033[2J";
+            terminal.clear();
         }
 
         void draw(){
@@ -72,21 +100,25 @@ class Console{
                 }
                 buffer += L"\n";
             }
-            std::wcout << buffer << std::endl;
+            terminal.draw(buffer + conv(colors::Fore.reset));
         }
 
         void hide_cursor(){
-            std::wcout << L"\033[?25l";
+            terminal.hideCursor();
         }
 
         void show_cursor(){
-            std::wcout << L"\033[?25h";
+            terminal.showCursor();
         }
 
         bool pixel(int x, int y, Pixel pixel){
             if (!is_valid(x, y)) return false;
             data[y][x] = pixel;
             return true;
+        }
+
+        Terminal &get_terminal(){
+            return terminal;
         }
 
         Console(){}
