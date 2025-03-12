@@ -64,7 +64,7 @@ class Console{
         Console(
             Pixel bg_pixel,
             bool vt = true
-        ): width(terminal.getSize().first - 5), height(terminal.getSize().second - 5), bg_pixel(bg_pixel) {
+        ): width(terminal.getSize().first - 1), height(terminal.getSize().second - 1), bg_pixel(bg_pixel) {
             terminal.startANSI();
             setup();
             ini_fill(width, height);

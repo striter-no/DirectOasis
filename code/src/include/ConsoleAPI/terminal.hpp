@@ -3,6 +3,9 @@
 #include <iostream>
 #include <utility>
 #include <sstream>
+#include <atomic>
+
+std::atomic<bool> g_interrupted{false};
 
 #ifdef _WIN32
     #include <windows.h>
@@ -13,11 +16,23 @@
     #include <termios.h>
     #include <iconv.h>
     #include <cerrno>
+    #include <csignal>
+    void ctrlChandler(int signal) {
+        if (signal == SIGINT) {
+            g_interrupted.store(true);
+        }
+    }
 #endif
+
+enum class CtrlKey {
+    C, Z, X, R, S, Q, V, B, N
+};
 
 class Terminal {
     private:
         int width, height;
+        std::wstring prestring;
+        
 
         #ifdef _WIN32
             HANDLE hConsole;
@@ -52,8 +67,104 @@ class Terminal {
             return result;
         }
 
+        bool isCtrlPressedWin(CtrlKey key) {
+            #ifdef _WIN32
+                DWORD events;
+                INPUT_RECORD inputRecord;
+                if (!PeekConsoleInput(hConsole, &inputRecord, 1, &events) || events == 0)
+                    return false;
+
+                if (inputRecord.EventType != KEY_EVENT || !inputRecord.Event.KeyEvent.bKeyDown)
+                    return false;
+
+                KEY_EVENT_RECORD keyEvent = inputRecord.Event.KeyEvent;
+                bool ctrlPressed = (keyEvent.dwControlKeyState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) != 0;
+
+                if (!ctrlPressed)
+                    return false;
+
+                switch (key) {
+                    case CtrlKey::C: return keyEvent.wVirtualKeyCode == 'C';
+                    case CtrlKey::Z: return keyEvent.wVirtualKeyCode == 'Z';
+                    case CtrlKey::X: return keyEvent.wVirtualKeyCode == 'X';
+                    // Добавьте другие клавиши по аналогии
+                }
+            #endif
+            return false;
+        }
+
+        // Для Unix
+        bool isCtrlPressedUnix(CtrlKey key) {
+            #ifndef _WIN32
+                if (!hasInput())
+                    return false;
+
+                char c = 0;
+                read(STDIN_FILENO, &c, 1);
+
+                switch (key) {
+                    case CtrlKey::C: return c == 3;   // Ctrl+C
+                    case CtrlKey::Z: return c == 26;  // Ctrl+Z
+                    case CtrlKey::X: return c == 24;  // Ctrl+X
+                    case CtrlKey::R: return c == 18;  // Ctrl+R
+                    case CtrlKey::S: return c == 19;  // Ctrl+S
+                    case CtrlKey::Q: return c == 17;  // Ctrl+Q
+                    // Добавьте другие комбинации
+                }
+            #endif
+            return false;
+        }
+
+        #ifdef _WIN32
+        BOOL WINAPI consoleHandler(DWORD signal) {
+            if (signal == CTRL_C_EVENT) {
+                g_interrupted = true;
+                return TRUE;
+            }
+            return FALSE;
+        }
+        #endif
+
+        void _setup(){
+            #ifdef _WIN32
+            SetConsoleCtrlHandler(consoleHandler, TRUE);
+            #else
+            std::signal(SIGINT, ctrlChandler);
+            #endif
+        }
+
     public:
+
+        bool isCtrlCPressed() const {
+            return g_interrupted.load();
+        }
+
+        void resetInterrupt() {
+            g_interrupted.store(false);
+        }
+
+        // bool isCtrlPressed(CtrlKey key) {
+        //     #ifdef _WIN32
+        //         return isCtrlPressedWin(key);
+        //     #else
+        //         return isCtrlPressedUnix(key);
+        //     #endif
+        // }
+
+        // Проверка наличия ввода (для Unix)
+        bool hasInput() {
+            #ifndef _WIN32
+                struct timeval tv = {0, 0};
+                fd_set fds;
+                FD_ZERO(&fds);
+                FD_SET(STDIN_FILENO, &fds);
+                return select(STDIN_FILENO+1, &fds, nullptr, nullptr, &tv) > 0;
+            #endif
+            return false;
+        }
+
         Terminal() {
+            _setup();
             #ifdef _WIN32
                 hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
                 hConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -123,7 +234,7 @@ class Terminal {
                 mode |= ENABLE_MOUSE_INPUT;
                 SetConsoleMode(hConsole, mode);
             #else
-                print("\033[?1003h");
+                raw_write("\033[?1003h");
             #endif
         }
 
@@ -134,7 +245,7 @@ class Terminal {
                 mode &= ~ENABLE_MOUSE_INPUT;
                 SetConsoleMode(hConsole, mode);
             #else
-                print("\033[?1003l");
+                raw_write("\033[?1003l");
             #endif
         }
 
@@ -161,22 +272,7 @@ class Terminal {
         }
 
         void draw(std::wstring &&data) {
-            #ifdef _WIN32
-                DWORD written;
-                if(!WriteConsoleW(hConsoleOut, data.c_str(), static_cast<DWORD>(length), &written, nullptr)) {
-                    throw std::runtime_error("Write console error");
-                }
-            #else
-                std::string converted_str = wideToUTF8(data);
-
-                if(converted_str.size() == static_cast<size_t>(-1)) 
-                    throw std::runtime_error("Encoding error");
-                
-                ssize_t result = write(fdOut, converted_str.c_str(), converted_str.size());
-                
-                if(result == -1) 
-                    throw std::runtime_error("Write error");
-            #endif
+            draw(data);
         }
 
         void draw(std::wstring &data) {
@@ -220,9 +316,7 @@ class Terminal {
             return data;
         }
 
-        void pix(int x, int y, wchar_t simb, std::wstring &data){
-            
-
+        void pix(int x, int y, wchar_t simb, std::wstring &data){            
             if(x >= 0 && x < width && y >= 0 && y < height)
                 data[y * width + x] = simb;
         }
@@ -239,29 +333,28 @@ class Terminal {
         }
 
         void clear(){
-            draw(L"\033[H\033[2J");
-            cursor(0, 0);
+            raw_write("\033[H");
         }
 
-        void hideCursor(){
+        void hideCursor() {
             #ifdef _WIN32
                 CONSOLE_CURSOR_INFO cci;
                 cci.dwSize = 1;
                 cci.bVisible = FALSE;
                 SetConsoleCursorInfo(hConsole, &cci);
             #else
-                print("\033[?25l");
+                raw_write("\033[?25l");
             #endif
         }
 
-        void showCursor(){
+        void showCursor() {
             #ifdef _WIN32
                 CONSOLE_CURSOR_INFO cci;
                 cci.dwSize = 1;
                 cci.bVisible = TRUE;
                 SetConsoleCursorInfo(hConsole, &cci);
             #else
-                print("\033[?25h");
+                raw_write("\033[?25h");
             #endif
         }
 
@@ -272,7 +365,14 @@ class Terminal {
                 mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
                 SetConsoleMode(hConsole, mode);
             #else
-                print("\033[?1049h");
+                raw_write("\033[?1049h");
             #endif
+        }
+
+        void raw_write(std::string data){
+            ssize_t result = write(fdOut, data.c_str(), data.size());
+            if (result == -1) {
+                throw std::runtime_error("Show cursor error");
+            }
         }
 };
