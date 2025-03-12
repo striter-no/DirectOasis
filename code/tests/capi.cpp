@@ -1,5 +1,6 @@
 #include <ConsoleAPI/capi.hpp>
 #include <ConsoleAPI/HID/mouse.hpp>
+#include <ConsoleAPI/HID/ansi_keyboard.hpp>
 #include <unistd.h>
 
 void text(
@@ -14,37 +15,41 @@ void text(
 }
 
 int main(){
+    float termAspect = 9/16.f;
+    float dt = 5000; 
+    int tick = 0;
+
     Console console( 
         Pixel(L".", conv(colors::rgb_back(255, 0, 255)))
     );
+    auto &term = console.get_terminal();
+    term.enableRawInput();
+    
+    console.hide_cursor();
 
-    Mouse mouse(console.get_terminal());
+    Mouse mouse(term);
+    Keyboard keyboard(term);
     mouse.start();
 
-    float dt = 5000; 
-    float termAspect = 9/16.f;
-
-    int tick = 0;
-    console.hide_cursor();
-    console.get_terminal().enableRawInput();
-    while(!console.get_terminal().isCtrlCPressed()){
-
-
+    while(!term.isCtrlCPressed()){
+        keyboard.pollEvents();
         mouse.pollEvent();
+
         console.clear();
         auto [x, y] = mouse.getPosition();
         text(console, L"X: " + std::to_wstring(x) + L" Y: " + std::to_wstring(y) + L" Tick: " + std::to_wstring(tick), 0, 0, conv(colors::Fore.green));
 
         console.pixel(x, y, Pixel(L"*", conv(colors::Fore.red)));
+        console.pixel(0, 2, Pixel(keyboard.getUnicodePressed(), conv(colors::Fore.red)));
 
         console.draw();
-        // usleep(dt);
+        usleep(dt);
         tick++;
     }
 
-    console.get_terminal().disableMouse();
-    console.get_terminal().showCursor();
-    console.get_terminal().restoreInput();
+    term.disableMouse();
+    term.showCursor();
+    term.restoreInput();
     return 0;
 }
 

@@ -113,6 +113,7 @@ class Console{
 
         bool pixel(int x, int y, Pixel pixel){
             if (!is_valid(x, y)) return false;
+            if (!pixel.color.empty()) pixel.data += conv(colors::Fore.reset);
             data[y][x] = pixel;
             return true;
         }
