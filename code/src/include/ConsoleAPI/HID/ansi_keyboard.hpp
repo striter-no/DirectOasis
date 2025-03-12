@@ -14,6 +14,7 @@
 #endif
 
 #include <utils/string.hpp>
+#include <algorithm>
 
 struct KeyMap {
     const char* sequence;
@@ -158,7 +159,11 @@ class Keyboard {
 
         bool isKeyPressed(const std::wstring& name) {
             for (const auto& k : pressed_keys) {
-                if (k.name == name) return true;
+                if (k.name == name) {
+                    // Erase key after processing it to avoid duplicate detection
+                    pressed_keys.erase(std::remove_if(pressed_keys.begin(), pressed_keys.end(), [k](const Key& key) { return key.name == k.name; }), pressed_keys.end());
+                    return true;
+                }
             }
             return false;
         }

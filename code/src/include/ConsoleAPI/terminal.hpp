@@ -163,6 +163,16 @@ class Terminal {
             return false;
         }
 
+        bool supportsVT() {
+            #ifdef _WIN32
+                DWORD mode;
+                GetConsoleMode(hConsole, &mode);
+                return (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0;
+            #else
+                return true; 
+            #endif
+        }
+
         Terminal() {
             _setup();
             #ifdef _WIN32

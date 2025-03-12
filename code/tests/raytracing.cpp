@@ -1,7 +1,21 @@
+#include <ConsoleAPI/HID/ansi_keyboard.hpp>
+#include <ConsoleAPI/HID/mouse.hpp>
 #include <ConsoleAPI/capi.hpp>
+
 #include <ConsoleAPI/raytracing/shaders.hpp>
 
 Shader shader;
+
+void text(
+    Console &console,
+    std::wstring text,
+    int x, int y,
+    std::wstring color = L""
+){
+    for (int i = 0; i < text.size(); ++i) {
+        console.pixel(x + i, y, Pixel(std::wstring{} + text[i], color));
+    }
+}
 
 Pixel pixel(float x, float y, float aspectRatio){
     Ray ray;
@@ -17,8 +31,17 @@ int main(){
     Console console( 
         Pixel(L".", conv(colors::rgb_back(255, 0, 255)))
     );
+    auto &term = console.get_terminal();
+    term.enableRawInput();
+    
+    console.hide_cursor();
+
+    Mouse mouse(term);
+    Keyboard keyboard(term);
+    mouse.start();
 
     auto &cam = shader.getCamera();
+    cam.rotation = glm::vec3(.0f, .0f, .0f);
     cam.position = glm::vec3(0.0f, 0.0f, 0.0f);
 
     auto &light = shader.light;
@@ -44,9 +67,33 @@ int main(){
     float termAspect = 9/16.f;
 
     int tick = 0;
-    console.hide_cursor();
-    while(true){
+    while(!term.isCtrlCPressed()){
+        keyboard.pollEvents();
+        mouse.pollEvent();
+
         console.clear();
+        auto [x, y] = mouse.getPosition();
+
+        if (keyboard.isKeyPressed(L"w")){
+            cam.moveForward(0.1);
+        } else if (keyboard.isKeyPressed(L"s")){
+            cam.moveForward(-0.1);
+        }
+
+        if (keyboard.isKeyPressed(L"a")){
+            cam.moveRight(-0.1);
+        } else if (keyboard.isKeyPressed(L"d")){
+            cam.moveRight(0.1);
+        }
+
+        if (keyboard.isKeyPressed(L"e")){
+            cam.moveUp(0.1);
+        } else if (keyboard.isKeyPressed(L"q")){
+            cam.moveUp(-0.1);
+        }
+
+        // cam.rotateFromMouse(1, 1);
+
         for (int y = 0; y < console.height; ++y) {
             for (int x = 0; x < console.width; ++x) {
                 console.pixel(x, y, pixel(
@@ -57,8 +104,15 @@ int main(){
             }
         }
 
+        text(console, L"Camera Position: " + std::to_wstring(cam.position.x) + L' ' + std::to_wstring(cam.position.y) + L' ' + std::to_wstring(cam.position.z), 1, 1, conv(colors::Fore.white));
+        text(console, L"Camera Rotation: " + std::to_wstring(cam.getViewVector().x) + L' ' + std::to_wstring(cam.getViewVector().y) + L' ' + std::to_wstring(cam.getViewVector().z), 1, 3, conv(colors::Fore.white));
+
         console.draw();
         usleep(dt);
         tick++;
     }
+
+    term.disableMouse();
+    term.showCursor();
+    term.restoreInput();
 }

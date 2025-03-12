@@ -39,6 +39,7 @@ int main(){
         auto [x, y] = mouse.getPosition();
         text(console, L"X: " + std::to_wstring(x) + L" Y: " + std::to_wstring(y) + L" Tick: " + std::to_wstring(tick), 0, 0, conv(colors::Fore.green));
 
+
         console.pixel(x, y, Pixel(L"*", conv(colors::Fore.red)));
         console.pixel(0, 2, Pixel(keyboard.getUnicodePressed(), conv(colors::Fore.red)));
 

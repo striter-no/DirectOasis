@@ -43,8 +43,20 @@ class Shader {
             float normalizedX = (2.0f * x - 1.0f) * aspectRatio;
             float normalizedY = 1.0f - 2.0f * y;
 
-            ray.origin = camera.position;
-            ray.direction = glm::normalize(glm::vec3(normalizedX, normalizedY, -1.0f));
+            glm::vec3 forward = camera.getViewVector();
+            glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+            glm::vec3 up = glm::normalize(glm::cross(right, forward));
+
+            // Рассчитываем направление луча
+            glm::vec3 direction = 
+                forward * glm::vec3(0.0f, 0.0f, -1.0f) + 
+                right * normalizedX + 
+                up * normalizedY;
+
+            glm::vec3 no_cam_dir = glm::vec3(normalizedX, normalizedY, -1.0f);
+
+            ray.origin = camera.position; 
+            ray.direction = glm::normalize(no_cam_dir);
             ray.t = std::numeric_limits<float>::infinity();
 
             return body(ray, camera, objects);

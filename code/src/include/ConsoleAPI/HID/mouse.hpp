@@ -1,177 +1,155 @@
+// WindowMouse.h (полная реализация)
 #pragma once
 
-#include <ConsoleAPI/terminal.hpp>
-#include <termios.h>
-#include <unistd.h>
-#include <sys/select.h>
-#include <sstream>
+#include <utility>
+#include <cstdint>
+#include "./ansi_mouse.hpp"
 
-#include <utils/string.hpp>
+#ifdef _WIN32
+#include <windows.h>
+#elif __linux__
+#include <X11/Xlib.h>
+#include <X11/extensions/XTest.h>
+#endif
 
-enum class MouseButton {
-    UNKNOWN,
-    LEFT,
-    RIGHT,
-    MIDDLE,
-    SCROLL_UP,
-    SCROLL_DOWN
-};
+#ifdef _WIN32
+using WindowHandle = HWND;
+#elif __linux__
+using WindowHandle = Window;
+#endif
 
-class Mouse {
-private:
-    Terminal& terminal;
-    int x;
-    int y;
-    MouseButton pressedButton;
-    struct termios oldSettings;
-    bool isTrackingEnabled;
-
-    void enableRawMode() {
-        tcgetattr(STDIN_FILENO, &oldSettings);
-        struct termios raw = oldSettings;
-        raw.c_lflag &= ~(ICANON | ECHO);
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-    }
-
-    void disableRawMode() {
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldSettings);
-    }
-
-    void flushInput() {
-        while (terminal.hasInput()) {
-            char c;
-            read(STDIN_FILENO, &c, 1);
-        }
-    }
-
-    std::string readEscapeSequence() {
-        std::string seq;
-        char c;
-        
-        // Читаем первый байт
-        if (!terminal.hasInput() || read(STDIN_FILENO, &c, 1) != 1) return "";
-        seq += c;
-
-        // Проверяем начало escape-последовательности
-        if (c != '\033') return seq;
-
-        // Читаем второй байт
-        if (!terminal.hasInput() || read(STDIN_FILENO, &c, 1) != 1) return seq;
-        seq += c;
-
-        // Проверяем формат CSI
-        if (c != '[') return seq;
-
-        // Читаем до конца последовательности
-        while (terminal.hasInput()) {
-            if (read(STDIN_FILENO, &c, 1) != 1) break;
-            seq += c;
-            
-            // Проверяем конец SGR-последовательности
-            if (c == 'M' || c == 'm') break;
-        }
-        return seq;
-    }
-
+class WindowMouse {
 public:
-    Mouse(Terminal& term) : terminal(term), x(0), y(0), pressedButton(MouseButton::UNKNOWN), isTrackingEnabled(false) {}
 
-    ~Mouse() {
-        if (isTrackingEnabled) {
-            stop();
-        }
+    WindowMouse() {
+        #ifdef _WIN32
+            hwnd = GetActiveWindow(); // Получаем окно текущего потока
+            if (!hwnd) hwnd = GetForegroundWindow();
+        #elif __linux__
+            display = XOpenDisplay(nullptr);
+            if (!display) throw std::runtime_error("Cannot open X display");
+            int revert_to;
+            XGetInputFocus(display, &windowHandle, &revert_to);
+        #endif
     }
 
-    void start() {
-        enableRawMode();
-        terminal.enableMouse();
-        terminal.raw_write("\033[?1006h"); // Включаем SGR и все события мыши
-        isTrackingEnabled = true;
+    ~WindowMouse() {
+        #ifdef __linux__
+            if (display) XCloseDisplay(display);
+        #endif
     }
 
-    void stop() {
-        terminal.raw_write("\033[?1006l"); // Выключаем SGR и отслеживание
-        terminal.disableMouse();
-        disableRawMode();
-        isTrackingEnabled = false;
-    }
-
-    bool pollEvent() {
-        if (!isTrackingEnabled) return false;
-
-        std::string seq = readEscapeSequence();
-        if (seq.empty()) return false;
-
-        // Проверяем SGR-формат
-        if (utils::str::startswith(seq, "\033[<")) {
-            std::stringstream ss(seq.substr(3));
-            std::string token;
-            std::vector<std::string> parts;
-            
-            while (std::getline(ss, token, ';')) {
-                parts.push_back(token);
-            }
-            
-            if (parts.size() < 3) return false;
-            
-            int button = std::stoi(parts[0]);
-            x = std::stoi(parts[1]) - 1; // Преобразуем в 0-based
-            y = std::stoi(parts[2].substr(0, parts[2].size()-1)) - 1;
-            
-            bool isRelease = seq.back() == 'm';
-            bool isScroll = (button & 0x40) != 0;
-            
-            if (isScroll) {
-                switch (button & 0x0F) {
-                    case 64: pressedButton = MouseButton::SCROLL_UP; break;
-                    case 65: pressedButton = MouseButton::SCROLL_DOWN; break;
-                    default: pressedButton = MouseButton::UNKNOWN;
-                }
-            } else {
-                switch (button & 0x07) {
-                    case 0: pressedButton = MouseButton::LEFT; break;
-                    case 1: pressedButton = MouseButton::MIDDLE; break;
-                    case 2: pressedButton = MouseButton::RIGHT; break;
-                    default: pressedButton = MouseButton::UNKNOWN;
-                }
-            }
-            
-            if (isRelease) pressedButton = MouseButton::UNKNOWN;
-            return true;
-        }
-
-        // Классический XTerm-формат
-        if (utils::str::startswith(seq, "\033[M")) {
-            if (seq.size() < 6) return false;
-            
-            unsigned char button = seq[3];
-            unsigned char cx = seq[4];
-            unsigned char cy = seq[5];
-            
-            x = cx - 33;
-            y = cy - 33;
-            
-            if (button & 0x40) {
-                pressedButton = MouseButton::UNKNOWN;
-            } else {
-                switch (button & 0x07) {
-                    case 0: pressedButton = MouseButton::LEFT; break;
-                    case 1: pressedButton = MouseButton::MIDDLE; break;
-                    case 2: pressedButton = MouseButton::RIGHT; break;
-                    default: pressedButton = MouseButton::UNKNOWN;
-                }
-            }
-            return true;
-        }
-        
-        return false;
-    }
-
-    std::pair<int, int> getPosition() const {
-        return {x, y};
+    void pollEvents() {
+        updatePosition();
+        updateButtons();
     }
 
     bool isButtonPressed(MouseButton button) const {
-        return pressedButton == button;
+        return currentButton == button;
+    }
+
+    void moveMouse(int x, int y) {
+        #ifdef _WIN32
+            POINT clientPoint = { x, y };
+            ClientToScreen(hwnd, &clientPoint);
+            SetCursorPos(clientPoint.x, clientPoint.y);
+        #elif __linux__
+            XWarpPointer(display, None, windowHandle, 0, 0, 0, 0, x, y);
+            XFlush(display);
+        #endif
+        position = {x, y};
+    }
+
+    std::pair<int, int> getPosition() const {
+        return position;
+    }
+
+    MouseButton getButtonPressed() const {
+        return currentButton;
+    }
+
+    void lockCursor() {
+        #ifdef _WIN32
+            RECT rect;
+            GetClientRect(hwnd, &rect);
+            POINT pt{rect.left, rect.top};
+            ClientToScreen(hwnd, &pt);
+            rect.left = pt.x;
+            rect.top = pt.y;
+            pt.x = rect.right;
+            pt.y = rect.bottom;
+            ClientToScreen(hwnd, &pt);
+            rect.right = pt.x;
+            rect.bottom = pt.y;
+            ClipCursor(&rect);
+        #elif __linux__
+            XGrabPointer(display, windowHandle, True, 
+                        ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
+                        GrabModeAsync, GrabModeAsync, windowHandle, None, CurrentTime);
+            XFlush(display);
+        #endif
+    }
+
+    void unlockCursor() {
+        #ifdef _WIN32
+            ClipCursor(nullptr);
+        #elif __linux__
+            XUngrabPointer(display, CurrentTime);
+            XFlush(display);
+        #endif
+    }
+
+private:
+    std::pair<int, int> position{0, 0};
+    MouseButton currentButton{MouseButton::UNKNOWN};
+
+    #ifdef _WIN32
+        HWND hwnd;
+    #elif __linux__
+        Display* display{nullptr};
+        Window windowHandle;
+    #endif
+
+    void updatePosition() {
+        #ifdef _WIN32
+            POINT p;
+            GetCursorPos(&p);
+            ScreenToClient(hwnd, &p);
+            position = {p.x, p.y};
+        #elif __linux__
+            Window root, child;
+            int root_x, root_y, win_x, win_y;
+            unsigned int mask;
+            XQueryPointer(display, windowHandle, &root, &child, 
+                         &root_x, &root_y, &win_x, &win_y, &mask);
+            position = {win_x, win_y};
+        #endif
+    }
+
+    void updateButtons() {
+        #ifdef _WIN32
+            if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) {
+                currentButton = MouseButton::LEFT;
+            } else if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
+                currentButton = MouseButton::RIGHT;
+            } else if (GetAsyncKeyState(VK_MBUTTON) & 0x8000) {
+                currentButton = MouseButton::MIDDLE;
+            } else {
+                currentButton = MouseButton::UNKNOWN;
+            }
+        #elif __linux__
+            Window root, child;
+            int root_x, root_y, win_x, win_y;
+            unsigned int mask;
+            XQueryPointer(display, windowHandle, &root, &child, 
+                         &root_x, &root_y, &win_x, &win_y, &mask);
+            
+            if (mask & Button1Mask) currentButton = MouseButton::LEFT;
+            else if (mask & Button3Mask) currentButton = MouseButton::RIGHT;
+            else if (mask & Button2Mask) currentButton = MouseButton::MIDDLE;
+            else if (mask & Button4Mask) currentButton = MouseButton::SCROLL_UP;
+            else if (mask & Button5Mask) currentButton = MouseButton::SCROLL_DOWN;
+            else currentButton = MouseButton::UNKNOWN;
+        #endif
     }
 };
