@@ -56,7 +56,7 @@ class Shader {
             glm::vec3 no_cam_dir = glm::vec3(normalizedX, normalizedY, -1.0f);
 
             ray.origin = camera.position; 
-            ray.direction = glm::normalize(no_cam_dir);
+            ray.direction = glm::normalize(direction);
             ray.t = std::numeric_limits<float>::infinity();
 
             return body(ray, camera, objects);

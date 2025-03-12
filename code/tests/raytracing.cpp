@@ -37,6 +37,7 @@ int main(){
     console.hide_cursor();
 
     Mouse mouse(term);
+    WindowMouse winmouse;
     Keyboard keyboard(term);
     mouse.start();
 
@@ -58,7 +59,7 @@ int main(){
         Object(
             Material(glm::vec3(0.2f, 0.5f, 0.3f), 0.1f, 0.9f),
             std::make_shared<Plane>(
-                glm::vec3(0, 0, -5), glm::vec3(0, 0, 1)
+                glm::vec3(0, 5, 0), glm::vec3(0, -1, 0)
             )
         )
     );
@@ -67,17 +68,25 @@ int main(){
     float termAspect = 9/16.f;
 
     int tick = 0;
+    // winmouse.hideMouse();
+    int prev_x = 0, prev_y = 0;
+
     while(!term.isCtrlCPressed()){
+        winmouse.pollEvents();
+
         keyboard.pollEvents();
         mouse.pollEvent();
+
+        auto [rx, ry] = winmouse.getPosition();
+        winmouse.moveMouse(20, 20);
 
         console.clear();
         auto [x, y] = mouse.getPosition();
 
         if (keyboard.isKeyPressed(L"w")){
-            cam.moveForward(0.1);
-        } else if (keyboard.isKeyPressed(L"s")){
             cam.moveForward(-0.1);
+        } else if (keyboard.isKeyPressed(L"s")){
+            cam.moveForward(0.1);
         }
 
         if (keyboard.isKeyPressed(L"a")){
@@ -92,7 +101,7 @@ int main(){
             cam.moveUp(-0.1);
         }
 
-        // cam.rotateFromMouse(1, 1);
+        cam.rotateFromMouse(rx - 20, ry - 20, 0.1f);
 
         for (int y = 0; y < console.height; ++y) {
             for (int x = 0; x < console.width; ++x) {
@@ -104,14 +113,20 @@ int main(){
             }
         }
 
-        text(console, L"Camera Position: " + std::to_wstring(cam.position.x) + L' ' + std::to_wstring(cam.position.y) + L' ' + std::to_wstring(cam.position.z), 1, 1, conv(colors::Fore.white));
-        text(console, L"Camera Rotation: " + std::to_wstring(cam.getViewVector().x) + L' ' + std::to_wstring(cam.getViewVector().y) + L' ' + std::to_wstring(cam.getViewVector().z), 1, 3, conv(colors::Fore.white));
+        if (winmouse.isButtonPressed(MouseButton::LEFT)) {
+            text(console, L"Camera Position: " + std::to_wstring(cam.position.x) + L' ' + std::to_wstring(cam.position.y) + L' ' + std::to_wstring(cam.position.z), 1, 1, conv(colors::Fore.white));
+            text(console, L"Camera Rotation: " + std::to_wstring(cam.getViewVector().x) + L' ' + std::to_wstring(cam.getViewVector().y) + L' ' + std::to_wstring(cam.getViewVector().z), 1, 3, conv(colors::Fore.white));
+        } else {
+            text(console, L"Mouse X Y: " + std::to_wstring(rx) + L' ' + std::to_wstring(ry), 1, 1, conv(colors::Fore.white));
+        }
 
         console.draw();
         usleep(dt);
         tick++;
     }
 
+    mouse.stop();
+    // winmouse.showMouse();
     term.disableMouse();
     term.showCursor();
     term.restoreInput();

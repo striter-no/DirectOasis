@@ -31,7 +31,7 @@ class Camera {
 
         void rotateFromMouse(float dx, float dy, float sensitivity = 0.1f) {
             // Рыскание (вращение по горизонтали)
-            rotation.y += dx * sensitivity;
+            rotation.y -= dx * sensitivity;
             
             // Тангаж (вращение по вертикали) с ограничением
             rotation.x = glm::clamp(

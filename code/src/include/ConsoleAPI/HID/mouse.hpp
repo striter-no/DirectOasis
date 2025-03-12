@@ -99,6 +99,24 @@ public:
         #endif
     }
 
+    void hideMouse(){
+        #ifdef _WIN32
+            ShowCursor(FALSE);
+        #elif __linux__
+            XUnmapWindow(display, windowHandle);
+            XFlush(display);
+        #endif
+    }
+
+    void showMouse(){
+        #ifdef _WIN32
+            ShowCursor(TRUE);
+        #elif __linux__
+            XMapWindow(display, windowHandle);
+            XFlush(display);
+        #endif
+    }
+
 private:
     std::pair<int, int> position{0, 0};
     MouseButton currentButton{MouseButton::UNKNOWN};
