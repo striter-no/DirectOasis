@@ -1,10 +1,11 @@
 #include <ConsoleAPI/HID/ansi_keyboard.hpp>
 #include <ConsoleAPI/HID/mouse.hpp>
 #include <ConsoleAPI/capi.hpp>
+#include <ConsoleAPI/raytracing/chrono_utils.hpp>
 
 #include <ConsoleAPI/raytracing/shaders.hpp>
 
-Shader shader = Shader(GRAPHICS_TYPE::RAY_CASTING);
+Shader shader = Shader(GRAPHICS_TYPE::RAY_TRACING);
 
 void text(
     Console &console,
@@ -82,7 +83,7 @@ int main(){
     shader.addObject(
         Object(
             std::make_shared<Box>(
-                glm::vec3{0.f, 2.f, 0.f}, glm::vec3{1.f}, 
+                glm::vec3{0.f, 2.f, 2.f}, glm::vec3{1.f, 2.f, 1.f}, 
                 common
             )
         )
@@ -111,15 +112,36 @@ int main(){
 
     int tick = 0;
     
+    // if(time >= 1000){
+    //     FPS = frames;
+    //     glfwSetWindowTitle(window, (name + " | FPS: " + std::to_string(frames)).c_str());
+    //     time = 0; frames = 0;
+    // }
+
+    // begin = extra::getChornoTimeNow();
+
     // winmouse.lockCursor();
     winmouse.hideMouse();
     bool in_game = true;
 
+    int FPS = 0;
+    int frames = 0;
+    float time = 0;
+
+
     auto [w, h] = winmouse.getSize();
     float mx = 0, my = 0;
     glm::vec3 campos = {0, 0, 0};
+    auto begin = extra::getChornoTimeNow();
     while(!term.isCtrlCPressed()){
         console.clear();
+
+        if(time >= 1000){
+            FPS = frames;
+            time = 0; frames = 0;
+        }
+
+        begin = extra::getChornoTimeNow();
         for (int y = 0; y < console.height; ++y) {
             for (int x = 0; x < console.width; ++x) {
                 console.pixel(x, y, pixel(
@@ -129,7 +151,8 @@ int main(){
                 ));
             }
         }
-
+        frames++;
+        time += extra::getChronoElapsed(begin);
 
         winmouse.pollEvents();
         keyboard.pollEvents();
@@ -193,6 +216,10 @@ int main(){
                 std::to_wstring(light.direction.x) + L' ' + 
                 std::to_wstring(light.direction.y) + L' ' +
                 std::to_wstring(light.direction.z), 1, 1, conv(colors::Fore.white));
+        
+        text(console, 
+            L"FPS: " + 
+                std::to_wstring(FPS), 1, 2, conv(colors::Fore.white));
 
         console.draw();
         usleep(dt);
