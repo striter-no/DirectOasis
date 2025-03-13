@@ -92,14 +92,14 @@ class Shader {
                     }
                     if (lray.minIt.x == MAX_DIST) return glm::vec3{-1.f};
 
-                    // float diffuse = glm::max(glm::dot(glm::normalize(light.direction), lray.intersectNormal), 0.01f) * 0.7f;
-                    // float specular = glm::max(0.0f, glm::dot(glm::reflect(lray.direction, lray.intersectNormal), light.direction));
+                    float diffuse = glm::max(glm::dot(glm::normalize(light.direction), lray.intersectNormal), 0.01f) * 0.7f;
+                    float specular = glm::max(0.0f, glm::dot(glm::reflect(lray.direction, lray.intersectNormal), light.direction));
                     
-                    // auto lightSum = glm::mix(diffuse, (float)glm::pow(specular, 32), 0.5f);
+                    auto lightSum = diffuse + (float)glm::pow(specular, 32);
                     lray.origin += lray.direction * (lray.minIt.x - 0.001f);
                     lray.direction = lray.intersectNormal;
 
-                    return lray.intersectMaterial.color;// * glm::min(lightSum, 1.f);
+                    return lray.intersectMaterial.color * glm::min(lightSum, 1.f);
                 };
 
                 auto col = castRay(ray);
