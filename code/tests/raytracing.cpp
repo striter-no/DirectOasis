@@ -43,10 +43,6 @@ int main(){
     Keyboard keyboard(term);
     mouse.start();
 
-    auto &cam = shader.getCamera();
-    cam.rotation = glm::vec3(.0f, .0f, .0f);
-    cam.position = glm::vec3(-5.0f, 0.0f, 0.0f);
-
     auto &light = shader.light;
     light.direction = glm::normalize(glm::vec3(-0.642437, 0.600000, 0.476734 ));
 
@@ -83,7 +79,7 @@ int main(){
     int tick = 0;
     
     winmouse.lockCursor();
-    winmouse.showMouse();
+    winmouse.hideMouse();
     auto [w, h] = winmouse.getSize();
     float mx = 0, my = 0;
     glm::vec3 campos = {0, 0, 0};
@@ -104,14 +100,14 @@ int main(){
 
         auto [rx, ry] = winmouse.getPosition();
         winmouse.moveMouse(w / 2, h / 2);
-        my -= rx - w / 2;
-        mx += ry - h / 2;
+        mx += rx - w / 2;
+        my -= ry - h / 2;
 
         float lmx = ((float)mx / w - 0.5f) * 0.5f, 
               lmy = ((float)my / h - 0.5f) * 0.5f;
 
-        shader.setUniform("ux_mouse", rot(  lmx));
-        shader.setUniform("uy_mouse", rot( -lmy ));
+        shader.setUniform("ux_mouse", rot( lmx));
+        shader.setUniform("uy_mouse", rot(-lmy));
         
 
         glm::vec3 dir = {0, 0, 0}, dir_t = {0, 0, 0};
@@ -157,6 +153,7 @@ int main(){
     }
 
     mouse.stop();
+    winmouse.showMouse();
     winmouse.unlockCursor();
     term.disableMouse();
     term.showCursor();

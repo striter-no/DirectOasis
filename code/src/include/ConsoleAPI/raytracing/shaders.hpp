@@ -64,11 +64,14 @@ class Shader {
             ray.origin = vec3_uniforms["cam_pos"];
             ray.direction = glm::normalize(no_cam_dir);
             
+            // rayDirection.zx *= rot(-u_mouse.y);
+            // rayDirection.xy *= rot(u_mouse.x);
+
             auto zx = glm::vec2{ray.direction.z, ray.direction.x};
-            zx = zx * mat2_uniforms["ux_mouse"];
+            zx = zx * mat2_uniforms["uy_mouse"];
 
             auto xy = glm::vec2{zx.y, ray.direction.y};
-            xy = xy * mat2_uniforms["uy_mouse"];
+            xy = xy * mat2_uniforms["ux_mouse"];
 
             ray.direction = glm::vec3(xy.x, xy.y, zx.x);
             body(ray, camera, objects);
