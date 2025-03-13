@@ -63,9 +63,6 @@ class Shader {
 
             ray.origin = vec3_uniforms["cam_pos"];
             ray.direction = glm::normalize(no_cam_dir);
-            
-            // rayDirection.zx *= rot(-u_mouse.y);
-            // rayDirection.xy *= rot(u_mouse.x);
 
             auto zx = glm::vec2{ray.direction.z, ray.direction.x};
             zx = zx * mat2_uniforms["uy_mouse"];
@@ -81,21 +78,34 @@ class Shader {
             setMainBody([&](
                 Ray& ray, Camera& camera, std::vector<Object>& objects
             ){
-                ray.minIt = glm::vec2{MAX_DIST};
-                for (const auto& object : objects) {
-                    object.figure->intersect(ray);
+                auto castRay = [&](Ray &lray){
+                    lray.minIt = glm::vec2{MAX_DIST};
+                    for (const auto& object : objects) {
+                        object.figure->intersect(lray);
+                    }
+                    if (lray.minIt.x == MAX_DIST) return glm::vec3{-1.f};
+
+                    // float diffuse = glm::max(glm::dot(glm::normalize(light.direction), lray.intersectNormal), 0.01f) * 0.7f;
+                    // float specular = glm::max(0.0f, glm::dot(glm::reflect(lray.direction, lray.intersectNormal), light.direction));
+                    
+                    // auto lightSum = glm::mix(diffuse, (float)glm::pow(specular, 32), 0.5f);
+                    lray.origin += lray.direction * (lray.minIt.x - 0.001f);
+                    lray.direction = lray.intersectNormal;
+
+                    return lray.intersectMaterial.color;// * glm::min(lightSum, 1.f);
+                };
+
+                auto col = castRay(ray);
+                if (col.x == -1.f) {ray.color = glm::vec3(0.3f, 0.4f, 0.7f); return;}
+
+                Ray lray = ray;
+                lray.direction = light.direction;
+                if (castRay(lray).x != -1.f) {
+                    col *= 0.5f;
                 }
-
-                float diffuse = glm::max(glm::dot(glm::normalize(light.direction), ray.intersectNormal), 0.01f) * 0.5f;
-                float specular = glm::max(0.0f, glm::dot(glm::reflect(ray.direction, ray.intersectNormal), light.direction));
                 
-                float lightIntensity = diffuse + glm::pow(specular, 32);
-
-                if (ray.minIt.x == MAX_DIST) ray.color = glm::vec3(0.3f, 0.4f, 0.7f);
-                else ray.color = ray.intersectMaterial.color * glm::min(lightIntensity, 1.f);
+                ray.color = col;
             });
         }
         ~Shader(){}
 };
-// glm::vec3 direction = forward * glm::vec3(0.0f, 0.0f, -1.0f) + right * normalizedX + up * normalizedY;
-// ray.t = std::numeric_limits<float>::infinity();

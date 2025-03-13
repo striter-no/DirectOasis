@@ -46,23 +46,18 @@ int main(){
     auto &light = shader.light;
     light.direction = glm::normalize(glm::vec3(-0.642437, 0.600000, 0.476734 ));
 
-    shader.addObject(
-        Object(
-            std::make_shared<Sphere>(
-                glm::vec3(-5.0f, 0.0f, 0.0f), 1.0f, 
-                Material(glm::vec3(.8f, .2f, .4f), 0.1f, 0.9f)
-            )
-        )
-    );
-
-    shader.addObject(
-        Object(
-            std::make_shared<Box>(
-                glm::vec3{0.f, 2.f, 0.f}, glm::vec3{1.f}, 
-                Material(glm::vec3(.2f, .4f, 1.f), 0.1f, 0.9f)
-            )
-        )
-    );
+    for (int i = 0; i < 5; i++){
+        for (int k = 0; k < 5; k++){
+            shader.addObject(
+                Object(
+                    std::make_shared<Sphere>(
+                        glm::vec3(5.0f * i, 5.0f * k, 5.f), 1.0f, 
+                        Material(glm::vec3(.8f, .2f, .4f), 0.1f, 0.9f)
+                    )
+                )
+            );
+        }
+    }
 
     shader.addObject(
         Object(
@@ -78,8 +73,10 @@ int main(){
 
     int tick = 0;
     
-    winmouse.lockCursor();
+    // winmouse.lockCursor();
     winmouse.hideMouse();
+    bool in_game = true;
+
     auto [w, h] = winmouse.getSize();
     float mx = 0, my = 0;
     glm::vec3 campos = {0, 0, 0};
@@ -95,13 +92,16 @@ int main(){
             }
         }
 
+
         winmouse.pollEvents();
         keyboard.pollEvents();
 
-        auto [rx, ry] = winmouse.getPosition();
-        winmouse.moveMouse(w / 2, h / 2);
-        mx += rx - w / 2;
-        my -= ry - h / 2;
+        if (in_game){
+            auto [rx, ry] = winmouse.getPosition();
+            winmouse.moveMouse(w / 2, h / 2);
+            mx += rx - w / 2;
+            my -= ry - h / 2;
+        }
 
         float lmx = ((float)mx / w - 0.5f) * 0.5f, 
               lmy = ((float)my / h - 0.5f) * 0.5f;
@@ -109,6 +109,15 @@ int main(){
         shader.setUniform("ux_mouse", rot( lmx));
         shader.setUniform("uy_mouse", rot(-lmy));
         
+        if (keyboard.isKeyPressed(L"`")){
+            in_game = !in_game;
+            winmouse.showMouse();
+        }
+        if (keyboard.isKeyPressed(L"1")){
+            in_game = !in_game;
+            winmouse.hideMouse();
+        }
+
 
         glm::vec3 dir = {0, 0, 0}, dir_t = {0, 0, 0};
         if (keyboard.isKeyPressed(L"w")){
@@ -140,7 +149,7 @@ int main(){
         campos += dir * .1f;
 
         shader.setUniform("cam_pos", campos);
-        // light.direction = glm::normalize(glm::vec3(cos(tick*0.01), 0.75f, -sin(tick*0.01)));
+        light.direction = glm::normalize(glm::vec3(cos(tick*0.01), -sin(tick*0.01), 0.75f));
         text(console, 
             L"Light Direction: " + 
                 std::to_wstring(light.direction.x) + L' ' + 
@@ -154,7 +163,7 @@ int main(){
 
     mouse.stop();
     winmouse.showMouse();
-    winmouse.unlockCursor();
+    // winmouse.unlockCursor();
     term.disableMouse();
     term.showCursor();
     term.restoreInput();
