@@ -51,7 +51,7 @@ int main(){
             shader.addObject(
                 Object(
                     std::make_shared<Sphere>(
-                        glm::vec3(5.0f * i, 5.0f * k, 5.f), 1.0f, 
+                        glm::vec3(5.0f + i * 5.f, 0.f + 5.0f * k, 5.f), 1.0f, 
                         Material(glm::vec3(.8f, .2f, .4f), 0.1f, 0.9f)
                     )
                 )

@@ -6,8 +6,9 @@
 void Sphere::intersect(
     Ray& ray
 ) const {
-    auto b = glm::dot(ray.origin, ray.direction);
-    auto c = glm::dot(ray.origin, ray.origin) - this->radius * radius;
+    auto ro = ray.origin - center;
+    auto b = glm::dot(ro, ray.direction);
+    auto c = glm::dot(ro, ro) - this->radius * radius;
     auto h = b * b - c;
     if (h < 0.0f) {
         ray.intersectPoint = glm::vec3(-1.0f);
@@ -18,7 +19,7 @@ void Sphere::intersect(
 
     if (ray.it.x > 0.f && ray.it.x < ray.minIt.x) {
         ray.minIt = ray.it;
-        ray.intersectPoint = ray.origin + ray.direction * ray.it.x;
+        ray.intersectPoint = ro + ray.direction * ray.it.x;
         ray.intersectNormal = glm::normalize(ray.intersectPoint);
         ray.intersectMaterial = this->material;
     }
