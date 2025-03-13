@@ -12,12 +12,19 @@
 #include <functional>
 #include <memory>
 
+#include <MathLib/Random.hpp>
+
 struct Object {
     
     std::shared_ptr<Figure> figure;
     Object(std::shared_ptr<Figure> figure) 
         : figure(figure) {}
     Object() : figure(nullptr) {} // Инициализация указателя
+};
+
+enum GRAPHICS_TYPE {
+    RAY_TRACING,
+    RAY_CASTING
 };
 
 class Shader {
@@ -74,8 +81,8 @@ class Shader {
             body(ray, camera, objects);
         }
 
-        Shader(){
-            setMainBody([&](
+        Shader(GRAPHICS_TYPE gtype){
+            auto ray_casting = [&](
                 Ray& ray, Camera& camera, std::vector<Object>& objects
             ){
                 auto castRay = [&](Ray &lray){
@@ -105,7 +112,51 @@ class Shader {
                 }
                 
                 ray.color = col;
-            });
+            };
+
+            auto ray_tracing = [&](
+                Ray& ray, Camera& camera, std::vector<Object>& objects
+            ){
+                auto castRay = [&](Ray &lray){
+                    lray.minIt = glm::vec2{MAX_DIST};
+                    for (const auto& object : objects) {
+                        object.figure->intersect(lray);
+                    }
+                    if (lray.minIt.x == MAX_DIST) return glm::vec3{-1.f};
+
+                    if (lray.intersectMaterial.transparency > 0.f) {
+                        lray.origin += lray.direction * (lray.minIt.x + 0.001f);
+                        lray.direction = glm::refract(lray.direction, lray.intersectNormal, 1.f / (1.f + lray.intersectMaterial.transparency));
+                        return lray.intersectMaterial.color;
+                    }
+                    lray.origin += lray.direction * (lray.minIt.x - 0.001f);
+
+                    glm::vec3 rand = {eml::uniform(-1, 1), eml::uniform(-1, 1), eml::uniform(-1, 1)};
+                    glm::vec3 spec = glm::reflect(lray.direction, lray.intersectNormal);
+                    glm::vec3 diff = glm::normalize(rand * glm::dot(rand, lray.intersectNormal));
+
+                    lray.direction = glm::mix(diff, spec, lray.intersectMaterial.metallic);
+                    return lray.intersectMaterial.color;
+                };
+                glm::vec3 col = glm::vec3(1.f);
+                for (int i = 0; i < 8; i++){
+                    auto sec = castRay(ray);
+                    if (sec.x == -1.f) {ray.color = col * glm::vec3(0.3f, 0.4f, 0.7f); return;}
+                    col *= sec;
+                }
+                
+                ray.color = col;
+            };
+
+            switch(gtype){
+                case RAY_TRACING:
+                    body = ray_tracing;
+                    break;
+                case RAY_CASTING:
+                    body = ray_casting;
+                    break;
+            }
         }
+        Shader(){}
         ~Shader(){}
 };

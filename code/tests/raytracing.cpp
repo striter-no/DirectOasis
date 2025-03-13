@@ -4,7 +4,7 @@
 
 #include <ConsoleAPI/raytracing/shaders.hpp>
 
-Shader shader;
+Shader shader = Shader(GRAPHICS_TYPE::RAY_CASTING);
 
 void text(
     Console &console,
@@ -46,24 +46,62 @@ int main(){
     auto &light = shader.light;
     light.direction = glm::normalize(glm::vec3(-0.642437, 0.600000, 0.476734 ));
 
-    for (int i = 0; i < 5; i++){
-        for (int k = 0; k < 5; k++){
-            shader.addObject(
-                Object(
-                    std::make_shared<Sphere>(
-                        glm::vec3(5.0f + i * 5.f, 0.f + 5.0f * k, 5.f), 1.0f, 
-                        Material(glm::vec3(.8f, .2f, .4f), 0.1f, 0.9f)
-                    )
-                )
-            );
-        }
-    }
+    Material common;
+    common.emissive = 0.f;
+    common.transparency = 0.f;
+    common.metallic = 0.2f;
+    common.roughness = 0.1f;
+    common.color = glm::vec3(0.7f, 0.7f, 0.7f);
+
+    Material metallic = common;
+    metallic.color = glm::vec3(0.8f, 0.1f, 0.8f);
+    metallic.metallic = 8.f;
+
+    Material transp = common;
+    transp.color = glm::vec3(0.2f, 0.8f, 0.8f);
+    transp.transparency = 0.5f;
+
+    shader.addObject(
+        Object(
+            std::make_shared<Sphere>(
+                glm::vec3(-5.0f, 0.0f, 0.0f), 1.0f, 
+                transp
+            )
+        )
+    );
+
+    shader.addObject(
+        Object(
+            std::make_shared<Sphere>(
+                glm::vec3(-5.0f, 0.0f, 5.0f), 2.0f, 
+                metallic
+            )
+        )
+    );
+
+    shader.addObject(
+        Object(
+            std::make_shared<Box>(
+                glm::vec3{0.f, 2.f, 0.f}, glm::vec3{1.f}, 
+                common
+            )
+        )
+    );
+
+    shader.addObject(
+        Object(
+            std::make_shared<Box>(
+                glm::vec3{2.f, 2.f, 0.f}, glm::vec3{1.f}, 
+                transp
+            )
+        )
+    );
 
     shader.addObject(
         Object(
             std::make_shared<Plane>(
                 glm::vec3{0.f, 0.f, 1.f},
-                Material(glm::vec3(1.f, 1.f, 1.f), 0.1f, 0.9f)
+                common
             )
         )
     );
@@ -110,11 +148,11 @@ int main(){
         shader.setUniform("uy_mouse", rot(-lmy));
         
         if (keyboard.isKeyPressed(L"`")){
-            in_game = !in_game;
+            in_game = false;
             winmouse.showMouse();
         }
         if (keyboard.isKeyPressed(L"1")){
-            in_game = !in_game;
+            in_game = true;
             winmouse.hideMouse();
         }
 

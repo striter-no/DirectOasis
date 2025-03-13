@@ -20,7 +20,7 @@ void Sphere::intersect(
     if (ray.it.x > 0.f && ray.it.x < ray.minIt.x) {
         ray.minIt = ray.it;
         ray.intersectPoint = ro + ray.direction * ray.it.x;
-        ray.intersectNormal = glm::normalize(ray.intersectPoint);
+        ray.intersectNormal = ray.intersectPoint - this->center;
         ray.intersectMaterial = this->material;
     }
 }
