@@ -19,8 +19,10 @@ sourceDir = variables.sourcedDir
 mainDir = variables.mainDir
 
 [libraries]
-dllsToLink = (pthread, boost_system, boost_thread, X11, Xfixes) 
-libDir = /usr/lib/aarch64-linux-gnu/
+dllsToLink = (pthread, X11, Xfixes) 
+# boost_system, boost_thread
+
+#libDir = /usr/lib/aarch64-linux-gnu/
 # OpenCL
 # dllsToLink = (GL, glfw, GLEW, wayland-client)
 
