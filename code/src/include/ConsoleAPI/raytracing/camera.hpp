@@ -9,7 +9,7 @@ class Camera {
         glm::vec3 rotation;
         float fov;
 
-        glm::vec3 getViewVector() const {
+        glm::vec3 getForward() const {
             glm::vec3 direction;
             float yaw = glm::radians(rotation.y);
             float pitch = glm::radians(rotation.x);
@@ -17,6 +17,14 @@ class Camera {
             direction.y = sin(pitch);             // Тангаж (вверх/вниз)
             direction.z = -cos(yaw) * cos(pitch); // Отрицательная ось Z по умолчанию
             return glm::normalize(direction);
+        }
+
+        glm::vec3 getRight() const {
+            return glm::cross(getForward(), glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+
+        glm::vec3 getUp() const {
+            return glm::cross(getRight(), getForward());
         }
 
         glm::mat4 getViewMatrix() const {
@@ -42,21 +50,27 @@ class Camera {
         }
 
         void moveForward(float dt){
-            position += getViewVector() * dt;
+            position += getForward() * dt;
         }
 
         void moveRight(float dt){
-            position += glm::cross(getViewVector(), glm::vec3(0.0f, 1.0f, 0.0f)) * dt;
+            position += getRight() * dt;
         }
 
         void moveUp(float dt){
-            position += glm::vec3(0.0f, 1.0f, 0.0f) * dt;
+            position += getUp() * dt;
         }
 
         void rotate(float dx, float dy, float dz){
             rotation.x += dx;
             rotation.y += dy;
             rotation.z += dz;
+        }
+
+        glm::mat2 rot(float a) {
+            float s = glm::sin(a);
+            float c = glm::cos(a);
+            return glm::mat2(c, -s, s, c);
         }
 
         Camera(

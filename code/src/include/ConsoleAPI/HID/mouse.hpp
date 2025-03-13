@@ -9,7 +9,9 @@
 #include <windows.h>
 #elif __linux__
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <X11/extensions/XTest.h>
+#include <X11/extensions/Xfixes.h> 
 #endif
 
 #ifdef _WIN32
@@ -19,6 +21,9 @@ using WindowHandle = Window;
 #endif
 
 class WindowMouse {
+    static int X11ErrorHandler(Display*, XErrorEvent*) {
+        return 0; // Подавляем ошибки X11
+    }
 public:
 
     WindowMouse() {
@@ -28,9 +33,31 @@ public:
         #elif __linux__
             display = XOpenDisplay(nullptr);
             if (!display) throw std::runtime_error("Cannot open X display");
-            int revert_to;
-            XGetInputFocus(display, &windowHandle, &revert_to);
+            
+            // Получаем активное окно через EWMH
+            Atom net_active = XInternAtom(display, "_NET_ACTIVE_WINDOW", False);
+            Atom type;
+            int format;
+            unsigned long nitems, bytes_after;
+            unsigned char* data = nullptr;
+            
+            if (XGetWindowProperty(display, DefaultRootWindow(display), net_active, 0, ~0, False,
+                                XA_WINDOW, &type, &format, &nitems, &bytes_after, &data) == Success) {
+                if (type == XA_WINDOW && nitems > 0) {
+                    windowHandle = *((Window*)data);
+                    XFree(data);
+                }
+            }
+            
+            // Если не получили активное окно - используем текущее
+            if (!windowHandle) {
+                int revert_to;
+                XGetInputFocus(display, &windowHandle, &revert_to);
+            }
+            
+            XSetErrorHandler(X11ErrorHandler);
         #endif
+        // В конструкторе после открытия дисплея:
     }
 
     ~WindowMouse() {
@@ -83,6 +110,9 @@ public:
             rect.bottom = pt.y;
             ClipCursor(&rect);
         #elif __linux__
+            XRaiseWindow(display, windowHandle);
+            XSetInputFocus(display, windowHandle, RevertToParent, CurrentTime);
+            XFlush(display);
             XGrabPointer(display, windowHandle, True, 
                         ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
                         GrabModeAsync, GrabModeAsync, windowHandle, None, CurrentTime);
@@ -103,7 +133,7 @@ public:
         #ifdef _WIN32
             ShowCursor(FALSE);
         #elif __linux__
-            XUnmapWindow(display, windowHandle);
+            XFixesHideCursor(display, windowHandle);
             XFlush(display);
         #endif
     }
@@ -112,10 +142,33 @@ public:
         #ifdef _WIN32
             ShowCursor(TRUE);
         #elif __linux__
-            XMapWindow(display, windowHandle);
+            XFixesShowCursor(display, windowHandle);
             XFlush(display);
         #endif
     }
+
+    std::pair<int, int> getSize() const {
+        if (!display) return {0, 0}; // Добавьте проверку дисплея
+
+        // Проверка существования окна
+        XWindowAttributes attrs;
+        if (!XGetWindowAttributes(display, windowHandle, &attrs)) {
+            return {0, 0};
+        }
+
+        // Альтернативный способ через XGetGeometry
+        Window root;
+        int x, y;
+        unsigned int width, height, border, depth;
+        if (!XGetGeometry(display, windowHandle, &root, &x, &y, 
+                        &width, &height, &border, &depth)) {
+            return {0, 0};
+        }
+
+        return {static_cast<int>(width), static_cast<int>(height)};
+    }
+
+    
 
 private:
     std::pair<int, int> position{0, 0};
