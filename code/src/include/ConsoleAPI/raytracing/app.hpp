@@ -139,10 +139,6 @@ class DirectOasis {
             elapsed += extra::getChronoElapsed(begin);
         }
 
-        void run(){
-            ;
-        }
-
         DirectionalLight &getLight(){
             return main_shader.light;
         }

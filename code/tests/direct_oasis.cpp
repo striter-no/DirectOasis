@@ -39,13 +39,23 @@ int main(){
         )
     });
 
+    app.object({
+        std::make_shared<Triangle>(
+            glm::vec3{1.f, 1.f, 0.1f},
+            glm::vec3{0.f, 1.f, 0.1f},
+            glm::vec3{0.f, 0.f, 0.1f},
+
+            common, cyan
+        )
+    });
+
     app.setup();
 
     auto &shader   = app.getMainShader();
     auto &mouse    = app.getWinMouse();
     auto &keyboard = app.getANSIKeyboard();
-    auto [ww, wh]    = app.getWindowSize();
-    auto [sw, sh] = app.getSimbolsSize();
+    auto [ww, wh]  = app.getWindowSize();
+    auto [sw, sh]  = app.getSimbolsSize();
     DirectBuffer buffer(sw, sh, 0.5625);
     while (!app.needStop()){
         app.update(
@@ -102,17 +112,6 @@ int main(){
                 buffer.shade(shader);
             },
             [&](){
-                // auto &console = app.getConsole();
-                // for (int x = 0; x < w; x++){
-                //     for (int y = 0; y < h; y++){
-                //         console.pixel(x, y, Pixel(L" ", conv(colors::rgb_back(
-                //             (float)x / w * 255.f, 
-                //             (float)y / h * 255.f, 
-                //             0.f
-                //         ))));
-                //     }
-                // }
-
                 buffer.draw(app.getConsole());
             }
         );

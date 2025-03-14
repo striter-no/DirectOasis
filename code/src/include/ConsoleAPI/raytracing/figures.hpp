@@ -60,12 +60,15 @@ struct Plane: public Figure {
 };
 
 struct Triangle: public Figure {
+    Material material;
+    glm::vec3 color;
+
     glm::vec3 v0;
     glm::vec3 v1;
     glm::vec3 v2;
 
     void intersect(Ray& ray) const;
 
-    Triangle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2): v0(v0), v1(v1), v2(v2) {}
+    Triangle(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2,  Material material, glm::vec3 color): color(color), material(material), v0(v0), v1(v1), v2(v2) {}
     Triangle() {}
 };

@@ -71,3 +71,39 @@ void Plane::intersect(
         ray.intersectColor = this->color;
     }
 }
+
+void Triangle::intersect(
+    Ray& ray
+) const {
+    constexpr float epsilon = std::numeric_limits<float>::epsilon();
+
+    glm::vec3 edge1 = v1 - v0;
+    glm::vec3 edge2 = v2 - v0;
+    glm::vec3 ray_cross_e2 = glm::cross(ray.direction, edge2);
+    float det = dot(edge1, ray_cross_e2);
+
+    if (det > -epsilon && det < epsilon) return;
+
+    float inv_det = 1.0 / det;
+    glm::vec3 s = ray.origin - v0;
+    float u = inv_det * glm::dot(s, ray_cross_e2);
+
+    if ((u < 0 && abs(u) > epsilon) || (u > 1 && abs(u-1) > epsilon)) return;
+
+    glm::vec3 s_cross_e1 = glm::cross(s, edge1);
+    float v = inv_det * glm::dot(ray.direction, s_cross_e1);
+
+    if ((v < 0 && abs(v) > epsilon) || (u + v > 1 && abs(u + v - 1) > epsilon)) return;
+
+    float t = inv_det * glm::dot(edge2, s_cross_e1);
+    if (t <= epsilon) return; 
+
+    ray.it = glm::vec2{t};
+    if (ray.it.x > 0.f && ray.it.x < ray.minIt.x) {
+        ray.minIt = ray.it;
+        ray.intersectNormal = glm::normalize(glm::cross(edge1, edge2));
+        ray.intersectPoint = ray.origin + ray.direction * ray.it.x;
+        ray.intersectMaterial = this->material;
+        ray.intersectColor = this->color;
+    }
+}
