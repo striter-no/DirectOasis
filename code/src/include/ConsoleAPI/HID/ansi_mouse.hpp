@@ -19,7 +19,7 @@ enum class MouseButton {
 
 class Mouse {
 private:
-    Terminal& terminal;
+    Terminal* terminal;
     int x;
     int y;
     MouseButton pressedButton;
@@ -38,7 +38,7 @@ private:
     }
 
     void flushInput() {
-        while (terminal.hasInput()) {
+        while (terminal->hasInput()) {
             char c;
             read(STDIN_FILENO, &c, 1);
         }
@@ -49,21 +49,21 @@ private:
         char c;
         
         // Читаем первый байт
-        if (!terminal.hasInput() || read(STDIN_FILENO, &c, 1) != 1) return "";
+        if (!terminal->hasInput() || read(STDIN_FILENO, &c, 1) != 1) return "";
         seq += c;
 
         // Проверяем начало escape-последовательности
         if (c != '\033') return seq;
 
         // Читаем второй байт
-        if (!terminal.hasInput() || read(STDIN_FILENO, &c, 1) != 1) return seq;
+        if (!terminal->hasInput() || read(STDIN_FILENO, &c, 1) != 1) return seq;
         seq += c;
 
         // Проверяем формат CSI
         if (c != '[') return seq;
 
         // Читаем до конца последовательности
-        while (terminal.hasInput()) {
+        while (terminal->hasInput()) {
             if (read(STDIN_FILENO, &c, 1) != 1) break;
             seq += c;
             
@@ -74,7 +74,8 @@ private:
     }
 
 public:
-    Mouse(Terminal& term) : terminal(term), x(0), y(0), pressedButton(MouseButton::UNKNOWN), isTrackingEnabled(false) {}
+    Mouse(Terminal *term) : terminal(term), x(0), y(0), pressedButton(MouseButton::UNKNOWN), isTrackingEnabled(false) {}
+    Mouse(): terminal(nullptr) {}
 
     ~Mouse() {
         if (isTrackingEnabled) {
@@ -84,19 +85,19 @@ public:
 
     void start() {
         enableRawMode();
-        terminal.enableMouse();
-        terminal.raw_write("\033[?1006h"); // Включаем SGR и все события мыши
+        terminal->enableMouse();
+        terminal->raw_write("\033[?1006h"); // Включаем SGR и все события мыши
         isTrackingEnabled = true;
     }
 
     void stop() {
-        terminal.raw_write("\033[?1006l"); // Выключаем SGR и отслеживание
-        terminal.disableMouse();
+        terminal->raw_write("\033[?1006l"); // Выключаем SGR и отслеживание
+        terminal->disableMouse();
         disableRawMode();
         isTrackingEnabled = false;
     }
 
-    bool pollEvent() {
+    bool pollEvents() {
         if (!isTrackingEnabled) return false;
 
         std::string seq = readEscapeSequence();
@@ -177,7 +178,7 @@ public:
             GetWindowRect(hwnd, &rect);
             
             int termWidth, termHeight;
-            terminal.getSize(termWidth, termHeight);
+            terminal->getSize(termWidth, termHeight);
             
             // Рассчитываем экранные координаты
             int screenX = rect.left + (x * (rect.right - rect.left)) / termWidth;
@@ -187,7 +188,7 @@ public:
         #else
             std::stringstream ss;
             ss << "\033[" << y+1 << ";" << x+1 << "M";
-            terminal.raw_write(ss.str());
+            terminal->raw_write(ss.str());
             this->x = x;
             this->y = y;
             return true;
@@ -196,7 +197,7 @@ public:
 
     bool center() {
         int width, height;
-        terminal.getSize(width, height);
+        terminal->getSize(width, height);
         return setPosition(width/2, height/2);
     }
 

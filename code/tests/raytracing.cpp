@@ -43,9 +43,9 @@ int main(){
     
     console.hide_cursor();
 
-    Mouse mouse(term);
+    Mouse mouse(&term);
     WindowMouse winmouse;
-    Keyboard keyboard(term);
+    Keyboard keyboard(&term);
     mouse.start();
 
     auto &light = shader.light;
@@ -62,6 +62,9 @@ int main(){
 
     Material transp = common;
     transp.transparency = 0.5f;
+
+    Material emissive = common;
+    emissive.emissive = 1.f;
 
     glm::vec3 red = glm::vec3(1.f, 0.3f, 0.2f);
     glm::vec3 blue = glm::vec3(0.2f, 0.2f, 1.f);
@@ -103,6 +106,15 @@ int main(){
             std::make_shared<Box>(
                 glm::vec3{2.f, 2.f, 0.f}, glm::vec3{1.f}, 
                 transp, purple
+            )
+        )
+    );
+
+    shader.addObject(
+        Object(
+            std::make_shared<Box>(
+                glm::vec3{2.f, 5.f, 0.f}, glm::vec3{1.5f}, 
+                emissive, yellow
             )
         )
     );
@@ -165,6 +177,7 @@ int main(){
             for (int x = 0; x < console.width; ++x) {
                 auto _avg = avg(prev_rays[y][x], rays[y][x]);
                 console.pixel(x, y, Pixel(
+                    // L" ", conv(colors::rgb_back(rays[y][x].color.r * 255, rays[y][x].color.g * 255, rays[y][x].color.b * 255) )
                     L" ", conv(colors::rgb_back(_avg.r * 255, _avg.g * 255, _avg.b * 255) )
                 ));
             }

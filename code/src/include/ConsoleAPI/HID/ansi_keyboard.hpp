@@ -57,13 +57,13 @@ const KeyMap keyMap[] = {
 const size_t keyMapSize = sizeof(keyMap) / sizeof(keyMap[0]);
 
 class Keyboard {
-        Terminal &terminal;
+        Terminal *terminal;
         std::vector<Key> pressed_keys;
 
     public:
 
         void start(){
-            terminal.enableRawInput();
+            terminal->enableRawInput();
         }
         void pollEvents() {
             #ifdef _WIN32
@@ -93,7 +93,7 @@ class Keyboard {
                     ReadConsoleInput(hInput, &inputRecord, 1, &events);
                 }
             #else
-                while (terminal.hasInput()) {
+                while (terminal->hasInput()) {
                     char c;
                     read(STDIN_FILENO, &c, 1);
                     
@@ -126,7 +126,7 @@ class Keyboard {
                         else if ((c & 0xF0) == 0xE0) remaining = 2;
                         else if ((c & 0xF8) == 0xF0) remaining = 3;
                         
-                        while (remaining > 0 && terminal.hasInput()) {
+                        while (remaining > 0 && terminal->hasInput()) {
                             read(STDIN_FILENO, &c, 1);
                             utf8_char += c;
                             remaining--;
@@ -147,7 +147,7 @@ class Keyboard {
         }
 
         void stop(){
-            terminal.restoreInput();
+            terminal->restoreInput();
         }
 
         bool isKeyPressed(int key) {
@@ -192,6 +192,7 @@ class Keyboard {
             return result;
         }
 
-        Keyboard(Terminal &terminal): terminal(terminal) {}
+        Keyboard(Terminal *terminal): terminal(terminal) {}
+        Keyboard(): terminal(nullptr) {}
         ~Keyboard(){}
 };

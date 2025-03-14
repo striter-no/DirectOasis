@@ -85,8 +85,8 @@ class Shader {
             auto getSky = [](glm::vec3 rd, glm::vec3 light){
                 glm::vec3 col = glm::vec3(0.3, 0.6, 1.0);
                 glm::vec3 sun = glm::vec3(0.95, 0.9, 1.0);
-                sun *= glm::max(0.001, glm::pow(glm::dot(rd, light), 256.0));
-                // col *= glm::max(0.001f, glm::dot(light, glm::vec3(0.0, 0.0, 1.0)));
+                sun *= glm::max(0.001, glm::pow(glm::dot(rd, light), 125.0));
+                // col *= glm::max(0.001f, glm::dot(light, glm::vec3(0.0, 0.0, -1.0)));
                 return glm::clamp(sun + col, 0.0f, 1.0f);
             };
 
@@ -147,6 +147,17 @@ class Shader {
                         object.figure->intersect(lray);
                     }
                     if (lray.minIt.x == MAX_DIST) return glm::vec3{-1.f};
+                    
+                    float diffuse = glm::max(glm::dot(glm::normalize(light.direction), lray.intersectNormal), 0.01f);// * 0.7f;
+                    float specular = glm::max(0.0f, glm::dot(glm::reflect(lray.direction, lray.intersectNormal), light.direction));
+                    
+                    auto lightSum = glm::mix(diffuse, (float)glm::pow(specular, 32), 0.5f);
+                    
+                    if (lray.intersectMaterial.emissive > 0.f) {
+                        lray.origin += lray.direction * (lray.minIt.x - 0.001f);
+                        lray.direction = -light.direction;
+                        return glm::vec3{1.f};//lray.intersectColor * lray.intersectMaterial.emissive;
+                    }
 
                     if (lray.intersectMaterial.transparency > 0.f) {
                         lray.origin += lray.direction * (lray.minIt.x + 0.001f);
@@ -161,25 +172,24 @@ class Shader {
                         // glm::vec3 diff = glm::normalize(rand * glm::dot(rand, lray.intersectNormal));
 
                         lray.direction = spec;//glm::mix(diff, spec, lray.intersectMaterial.metallic);
-                        return lray.intersectColor;
+                        return lray.intersectColor * glm::clamp(lightSum, 0.f, 1.f);
                     }
-                    float diffuse = glm::max(glm::dot(glm::normalize(light.direction), lray.intersectNormal), 0.01f);// * 0.7f;
-                    float specular = glm::max(0.0f, glm::dot(glm::reflect(lray.direction, lray.intersectNormal), light.direction));
                     
-                    auto lightSum = glm::mix(diffuse, (float)glm::pow(specular, 32), 0.5f);
                     lray.origin += lray.direction * (lray.minIt.x - 0.001f);
-                    lray.direction = glm::vec3{0.f};
+                    lray.direction = light.direction;//glm::vec3{0.f};
                     return lray.intersectColor * glm::clamp(lightSum, 0.f, 1.f);
                 };
                 glm::vec3 col = glm::vec3(1.f);
                 for (int i = 0; i < 2; i++){
                     auto sec = castRay(ray);
+                    
+                    Ray lray = ray;
+                    lray.direction = light.direction;
+                    if (castRay(lray).x != -1.f) {
+                        col *= 0.5f;
+                    }
+
                     if (sec.x == -1.f) {
-                        Ray lray = ray;
-                        lray.direction = light.direction;
-                        if (castRay(lray).x != -1.f) {
-                            col *= 0.5f;
-                        }
 
                         ray.color = col * getSky(ray.direction, light.direction); 
                         return;
