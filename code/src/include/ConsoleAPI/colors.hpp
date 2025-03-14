@@ -57,4 +57,20 @@ namespace colors{
     std::string rgb_back(int r, int g, int b){
         return "\033[48;2;" + std::to_string(r) + ";" + std::to_string(g) + ";" + std::to_string(b) + "m";
     }
+
+    std::string fore_to_back(std::string fore){
+        return "\033[48;2;" + fore.substr(7);
+    }
+
+    std::string back_to_fore(std::string back){
+        return "\033[38;2;" + back.substr(7);
+    }
+
+    std::wstring fore_to_back(std::wstring fore){
+        return L"\033[48;2;" + fore.substr(7);
+    }
+
+    std::wstring back_to_fore(std::wstring back){
+        return L"\033[38;2;" + back.substr(7);
+    }
 }

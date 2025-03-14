@@ -1,5 +1,6 @@
 #pragma once
 
+#include <MathLib/VectorFuncs.hpp>
 #include <utils/vector.hpp>
 #include <utils/string.hpp>
 

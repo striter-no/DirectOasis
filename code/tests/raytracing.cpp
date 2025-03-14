@@ -5,7 +5,7 @@
 
 #include <ConsoleAPI/raytracing/shaders.hpp>
 
-Shader shader = Shader(GRAPHICS_TYPE::RAY_TRACING);
+Shader shader = Shader(GRAPHICS_TYPE::RAY_CASTING);
 
 void text(
     Console &console,
@@ -52,21 +52,26 @@ int main(){
     common.transparency = 0.f;
     common.metallic = 0.2f;
     common.roughness = 0.1f;
-    common.color = glm::vec3(0.7f, 0.7f, 0.7f);
 
     Material metallic = common;
-    metallic.color = glm::vec3(0.8f, 0.1f, 0.8f);
     metallic.metallic = 8.f;
 
     Material transp = common;
-    transp.color = glm::vec3(0.2f, 0.8f, 0.8f);
     transp.transparency = 0.5f;
+
+    glm::vec3 red = glm::vec3(1.f, 0.3f, 0.2f);
+    glm::vec3 blue = glm::vec3(0.2f, 0.2f, 1.f);
+    glm::vec3 green = glm::vec3(0.3f, 1.f, 0.2f);
+    glm::vec3 yellow = glm::vec3(1.f, 1.f, 0.2f);
+    glm::vec3 purple = glm::vec3(1.f, 0.2f, 1.f);
+    glm::vec3 cyan = glm::vec3(0.2f, 1.f, 1.f);
+    glm::vec3 white = glm::vec3(1.f, 1.f, 1.f);
 
     shader.addObject(
         Object(
             std::make_shared<Sphere>(
                 glm::vec3(-5.0f, 0.0f, 0.0f), 1.0f, 
-                transp
+                transp, red
             )
         )
     );
@@ -75,7 +80,7 @@ int main(){
         Object(
             std::make_shared<Sphere>(
                 glm::vec3(-5.0f, 0.0f, 5.0f), 2.0f, 
-                metallic
+                metallic, white
             )
         )
     );
@@ -84,7 +89,7 @@ int main(){
         Object(
             std::make_shared<Box>(
                 glm::vec3{0.f, 2.f, 2.f}, glm::vec3{1.f, 2.f, 1.f}, 
-                common
+                common, cyan
             )
         )
     );
@@ -93,7 +98,7 @@ int main(){
         Object(
             std::make_shared<Box>(
                 glm::vec3{2.f, 2.f, 0.f}, glm::vec3{1.f}, 
-                transp
+                transp, purple
             )
         )
     );
@@ -102,7 +107,7 @@ int main(){
         Object(
             std::make_shared<Plane>(
                 glm::vec3{0.f, 0.f, 1.f},
-                common
+                common, white
             )
         )
     );
@@ -111,14 +116,6 @@ int main(){
     float termAspect = 9/16.f;
 
     int tick = 0;
-    
-    // if(time >= 1000){
-    //     FPS = frames;
-    //     glfwSetWindowTitle(window, (name + " | FPS: " + std::to_string(frames)).c_str());
-    //     time = 0; frames = 0;
-    // }
-
-    // begin = extra::getChornoTimeNow();
 
     // winmouse.lockCursor();
     winmouse.hideMouse();
@@ -210,7 +207,7 @@ int main(){
         campos += dir * .1f;
 
         shader.setUniform("cam_pos", campos);
-        light.direction = glm::normalize(glm::vec3(cos(tick*0.01), -sin(tick*0.01), 0.75f));
+        light.direction = glm::normalize(glm::vec3(cos(tick*0.005), -sin(tick*0.005), 0.75f));
         text(console, 
             L"Light Direction: " + 
                 std::to_wstring(light.direction.x) + L' ' + 

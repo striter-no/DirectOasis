@@ -37,11 +37,17 @@ int main(){
 
         console.clear();
         auto [x, y] = mouse.getPosition();
-        text(console, L"X: " + std::to_wstring(x) + L" Y: " + std::to_wstring(y) + L" Tick: " + std::to_wstring(tick), 0, 0, conv(colors::Fore.green));
+        // text(console, L"X: " + std::to_wstring(x) + L" Y: " + std::to_wstring(y) + L" Tick: " + std::to_wstring(tick), 0, 0, conv(colors::Fore.green));
 
 
-        console.pixel(x, y, Pixel(L"*", conv(colors::Fore.red)));
-        console.pixel(0, 2, Pixel(keyboard.getUnicodePressed(), conv(colors::Fore.red)));
+        // console.pixel(x, y, Pixel(L"*", conv(colors::Fore.red)));
+        // console.pixel(0, 2, Pixel(keyboard.getUnicodePressed(), conv(colors::Fore.red)));
+
+        for (int y = 0; y < console.height; ++y) {
+            for (int x = 0; x < console.width; ++x) {
+                console.pixel(x, y, Pixel(L" ", conv(colors::rgb_back((float)x / console.width * 255, (float)y / console.height * 255, 0))));
+            }
+        }
 
         console.draw();
         usleep(dt);
