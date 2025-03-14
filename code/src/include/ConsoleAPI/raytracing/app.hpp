@@ -12,8 +12,9 @@ class DirectBuffer {
         std::vector<std::vector<Ray>> rays;
         std::vector<std::vector<glm::vec3>> colors;
 
-        void draw(Console &console, int start_x = 0, int start_y = 0){
-            if (!colors.empty()){
+        void draw(Console &console, bool by_rays = true, int start_x = 0, int start_y = 0){
+            if (!by_rays){
+
                 for (int y = start_y; y < colors.size(); ++y) {
                     for (int x = start_x; x < colors[0].size(); ++x) {
                         console.pixel(x, y, Pixel(
@@ -21,11 +22,16 @@ class DirectBuffer {
                         ));
                     }
                 }
-            } else if (!rays.empty()){
+            } else if (by_rays){
+                // throw std::runtime_error("Rays is not empty: " + std::to_string(rays.size()) + "x" + std::to_string(rays[0].size()));
                 for (int y = start_y; y < rays.size(); ++y) {
                     for (int x = start_x; x < rays[0].size(); ++x) {
                         console.pixel(x, y, Pixel(
-                            L" ", conv(colors::rgb_back(rays[y][x].color.r * 255, rays[y][x].color.g * 255, rays[y][x].color.b * 255) )
+                            L" ", conv(colors::rgb_back(
+                                rays[y][x].color.r * 255.f, 
+                                rays[y][x].color.g * 255.f, 
+                                rays[y][x].color.b * 255.f
+                            ))
                         ));
                     }
                 }
@@ -37,7 +43,7 @@ class DirectBuffer {
         void shade(Shader &shader){
             int width = rays[0].size();
             int height = rays.size();
-
+            // throw std::runtime_error("Rays size: " + std::to_string(rays.size()) + "x" + std::to_string(rays[0].size()));
             for (int y = 0; y < height; ++y) {
                 for (int x = 0; x < width; ++x) {
                     shader.proceed((float)x / width, (float)y / height, (float)width / height * extraAspect, rays[y][x]);
@@ -119,7 +125,7 @@ class DirectOasis {
             }
 
             win_mouse.pollEvents();
-            ansi_mouse.pollEvents();
+            // ansi_mouse.pollEvents();
             ansi_kboard.pollEvents();
             user_update();
     

@@ -24,15 +24,15 @@ int main(){
     bool in_game = true;
     glm::vec3 campos = {0, 0, 0};
 
-    DirectOasis app(GRAPHICS_TYPE::RAY_TRACING);
+    DirectOasis app(GRAPHICS_TYPE::RAY_CASTING);
 
-    app.getMainShader().addObject({
+    app.object({
         std::make_shared<Sphere>(
             glm::vec3(-5.0f, 0.0f, 0.0f), 1.0f, 
             transp, red
     )});
 
-    app.getMainShader().addObject({
+    app.object({
         std::make_shared<Plane>(
             glm::vec3{0.f, 0.f, 1.f},
             common, white
@@ -40,21 +40,24 @@ int main(){
     });
 
     app.setup();
+
+    auto &shader   = app.getMainShader();
+    auto &mouse    = app.getWinMouse();
+    auto &keyboard = app.getANSIKeyboard();
+    auto [ww, wh]    = app.getWindowSize();
+    auto [sw, sh] = app.getSimbolsSize();
+    DirectBuffer buffer(sw, sh, 0.5625);
     while (!app.needStop()){
         app.update(
             [&](){
-                auto &shader   = app.getMainShader();
-                auto &mouse    = app.getWinMouse();
-                auto &keyboard = app.getANSIKeyboard();
-                auto [w, h]    = app.getWindowSize();
 
                 auto [rx, ry] = mouse.getPosition();
-                mouse.moveMouse(w / 2, h / 2);
-                mx += rx - w / 2;
-                my -= ry - h / 2;
+                mouse.moveMouse(ww / 2, wh / 2);
+                mx += rx - ww / 2;
+                my -= ry - wh / 2;
                 
-                float lmx = ((float)mx / w - 0.5f) * 0.5f, 
-                      lmy = ((float)my / h - 0.5f) * 0.5f;
+                float lmx = ((float)mx / ww - 0.5f) * 0.5f, 
+                      lmy = ((float)my / wh - 0.5f) * 0.5f;
                 
                 shader.setUniform("ux_mouse", rot( lmx));
                 shader.setUniform("uy_mouse", rot(-lmy));
@@ -71,7 +74,6 @@ int main(){
                 } else if (keyboard.isKeyPressed(L"d")){
                     dir += glm::vec3(0, 1.f, 0);
                 }
-
 
                 dir_t.z = dir.z * cos(-lmy) - dir.x * sin(-lmy);
                 dir_t.x = dir.z * sin(-lmy) + dir.x * cos(-lmy);
@@ -97,12 +99,20 @@ int main(){
                         -sin(tick*0.005), 
                         0.75f
                     ));
+                buffer.shade(shader);
             },
             [&](){
-                auto [w, h] = app.getSimbolsSize();
-                DirectBuffer buffer(w, h, 0.5625);
-                buffer.shade(app.getMainShader());
-                
+                // auto &console = app.getConsole();
+                // for (int x = 0; x < w; x++){
+                //     for (int y = 0; y < h; y++){
+                //         console.pixel(x, y, Pixel(L" ", conv(colors::rgb_back(
+                //             (float)x / w * 255.f, 
+                //             (float)y / h * 255.f, 
+                //             0.f
+                //         ))));
+                //     }
+                // }
+
                 buffer.draw(app.getConsole());
             }
         );
