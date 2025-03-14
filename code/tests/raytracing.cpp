@@ -5,7 +5,7 @@
 
 #include <ConsoleAPI/raytracing/shaders.hpp>
 
-Shader shader = Shader(GRAPHICS_TYPE::RAY_CASTING);
+Shader shader = Shader(GRAPHICS_TYPE::RAY_TRACING);
 
 void text(
     Console &console,
@@ -24,10 +24,14 @@ glm::mat2 rot(float a) {
     return glm::mat2(c, -s, s, c);
 }
 
-Pixel pixel(float x, float y, float aspectRatio){
+glm::vec3 avg(Ray &a, Ray &b){
+    return (a.color + b.color) / 2.f;
+}
+
+Ray pixel(float x, float y, float aspectRatio){
     Ray ray;
     shader.proceed(x, y, aspectRatio, ray);
-    return Pixel(L" ", conv(colors::rgb_back(ray.color.r * 255, ray.color.g * 255, ray.color.b * 255)));
+    return ray;
 }
 
 int main(){
@@ -50,7 +54,7 @@ int main(){
     Material common;
     common.emissive = 0.f;
     common.transparency = 0.f;
-    common.metallic = 0.2f;
+    common.metallic = 0.0f;
     common.roughness = 0.1f;
 
     Material metallic = common;
@@ -130,6 +134,7 @@ int main(){
     float mx = 0, my = 0;
     glm::vec3 campos = {0, 0, 0};
     auto begin = extra::getChornoTimeNow();
+    std::vector<std::vector<Ray>> prev_rays;
     while(!term.isCtrlCPressed()){
         console.clear();
 
@@ -138,16 +143,35 @@ int main(){
             time = 0; frames = 0;
         }
 
+        std::vector<std::vector<Ray>> rays;
         begin = extra::getChornoTimeNow();
         for (int y = 0; y < console.height; ++y) {
+            std::vector<Ray> row;
             for (int x = 0; x < console.width; ++x) {
-                console.pixel(x, y, pixel(
+                row.push_back(pixel(
                     (float)x / console.width,
                     (float)y / console.height,
                     console.width / console.height * termAspect
                 ));
             }
+            rays.push_back(row);
         }
+        if (prev_rays.empty()){
+            prev_rays = rays;
+            continue;
+        }
+
+        for (int y = 0; y < console.height; ++y) {
+            for (int x = 0; x < console.width; ++x) {
+                auto _avg = avg(prev_rays[y][x], rays[y][x]);
+                console.pixel(x, y, Pixel(
+                    L" ", conv(colors::rgb_back(_avg.r * 255, _avg.g * 255, _avg.b * 255) )
+                ));
+            }
+        }
+
+        prev_rays = rays;
+
         frames++;
         time += extra::getChronoElapsed(begin);
 

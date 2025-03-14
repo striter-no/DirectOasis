@@ -82,16 +82,18 @@ class Shader {
         }
 
         Shader(GRAPHICS_TYPE gtype){
+            auto getSky = [](glm::vec3 rd, glm::vec3 light){
+                glm::vec3 col = glm::vec3(0.3, 0.6, 1.0);
+                glm::vec3 sun = glm::vec3(0.95, 0.9, 1.0);
+                sun *= glm::max(0.001, glm::pow(glm::dot(rd, light), 256.0));
+                // col *= glm::max(0.001f, glm::dot(light, glm::vec3(0.0, 0.0, 1.0)));
+                return glm::clamp(sun + col, 0.0f, 1.0f);
+            };
+
             auto ray_casting = [&](
                 Ray& ray, Camera& camera, std::vector<Object>& objects
             ){
-                auto getSky = [](glm::vec3 rd, glm::vec3 light){
-                    glm::vec3 col = glm::vec3(0.3, 0.6, 1.0);
-                    glm::vec3 sun = glm::vec3(0.95, 0.9, 1.0);
-                    sun *= glm::max(0.001, glm::pow(glm::dot(rd, light), 256.0));
-                    // col *= glm::max(0.001f, glm::dot(light, glm::vec3(0.0, 0.0, 1.0)));
-                    return glm::clamp(sun + col, 0.0f, 1.0f);
-                };
+                
 
                 auto castRay = [&](Ray &lray){
                     lray.minIt = glm::vec2{MAX_DIST};
@@ -126,6 +128,19 @@ class Shader {
             auto ray_tracing = [&](
                 Ray& ray, Camera& camera, std::vector<Object>& objects
             ){
+                auto randOnSphere = [&](){
+                    glm::vec3 rand = {eml::uniform(0, 1), eml::uniform(0, 1), eml::uniform(0, 1)};
+                    float theta = rand.x * 2.0 * 3.14159265;
+                    float v = rand.y;
+                    float phi = acos(2.0 * v - 1.0);
+                    float r = pow(rand.z, 1.0 / 3.0);
+                    float x = r * sin(phi) * cos(theta);
+                    float y = r * sin(phi) * sin(theta);
+                    float z = r * cos(phi);
+
+                    return glm::vec3{x, y, z};
+                };
+
                 auto castRay = [&](Ray &lray){
                     lray.minIt = glm::vec2{MAX_DIST};
                     for (const auto& object : objects) {
@@ -138,20 +153,44 @@ class Shader {
                         lray.direction = glm::refract(lray.direction, lray.intersectNormal, 1.f / (1.f + lray.intersectMaterial.transparency));
                         return lray.intersectColor;
                     }
+                    if (lray.intersectMaterial.metallic > 0.f) {
+                        lray.origin += lray.direction * (lray.minIt.x - 0.001f);
+
+                        // glm::vec3 rand = randOnSphere();
+                        glm::vec3 spec = glm::reflect(lray.direction, lray.intersectNormal);
+                        // glm::vec3 diff = glm::normalize(rand * glm::dot(rand, lray.intersectNormal));
+
+                        lray.direction = spec;//glm::mix(diff, spec, lray.intersectMaterial.metallic);
+                        return lray.intersectColor;
+                    }
+                    float diffuse = glm::max(glm::dot(glm::normalize(light.direction), lray.intersectNormal), 0.01f);// * 0.7f;
+                    float specular = glm::max(0.0f, glm::dot(glm::reflect(lray.direction, lray.intersectNormal), light.direction));
+                    
+                    auto lightSum = glm::mix(diffuse, (float)glm::pow(specular, 32), 0.5f);
                     lray.origin += lray.direction * (lray.minIt.x - 0.001f);
-
-                    glm::vec3 rand = {eml::uniform(-1, 1), eml::uniform(-1, 1), eml::uniform(-1, 1)};
-                    glm::vec3 spec = glm::reflect(lray.direction, lray.intersectNormal);
-                    glm::vec3 diff = glm::normalize(rand * glm::dot(rand, lray.intersectNormal));
-
-                    lray.direction = glm::mix(diff, spec, lray.intersectMaterial.metallic);
-                    return lray.intersectColor;
+                    lray.direction = glm::vec3{0.f};
+                    return lray.intersectColor * glm::clamp(lightSum, 0.f, 1.f);
                 };
                 glm::vec3 col = glm::vec3(1.f);
-                for (int i = 0; i < 8; i++){
+                for (int i = 0; i < 2; i++){
                     auto sec = castRay(ray);
-                    if (sec.x == -1.f) {ray.color = col * glm::vec3(0.3f, 0.4f, 0.7f); return;}
+                    if (sec.x == -1.f) {
+                        Ray lray = ray;
+                        lray.direction = light.direction;
+                        if (castRay(lray).x != -1.f) {
+                            col *= 0.5f;
+                        }
+
+                        ray.color = col * getSky(ray.direction, light.direction); 
+                        return;
+                    }
                     col *= sec;
+                }
+
+                Ray lray = ray;
+                lray.direction = light.direction;
+                if (castRay(lray).x != -1.f) {
+                    col *= 0.5f;
                 }
                 
                 ray.color = col;
