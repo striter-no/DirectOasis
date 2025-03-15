@@ -6,6 +6,9 @@
 #include <ConsoleAPI/raytracing/chrono_utils.hpp>
 #include <ConsoleAPI/raytracing/shaders.hpp>
 
+#include <mutex>
+#include <thread>
+
 class DirectBuffer {
         float extraAspect = 1.f;
     public:
@@ -51,6 +54,32 @@ class DirectBuffer {
             }
         }
 
+        void multithread_shade(Shader &shader, int threads_count) {
+            std::vector<std::thread> threads;
+            threads.reserve(threads_count); // Резервируем место
+            int width = rays[0].size();
+            int height = rays.size();
+
+            for (int i = 0; i < threads_count; ++i) {
+                threads.emplace_back([&, i]() { // Захватываем i по значению
+                    int start_x = i * (width / threads_count);
+                    int end_x = (i == threads_count - 1) ? width : (i + 1) * (width / threads_count);
+                    for (int y = 0; y < height; ++y) {
+                        for (int x = start_x; x < end_x; ++x) {
+                            shader.proceed((float)x / width, (float)y / height, 
+                                        (float)width / height * extraAspect, rays[y][x]);
+                        }
+                    }
+                });
+            }
+
+            for (auto& t : threads) {
+                if (t.joinable()) {
+                    t.join();
+                }
+            }
+        }
+
         DirectBuffer(int width, int height, float extraAspect = 1.f):
             rays(height, std::vector<Ray>(width)),
             colors(height, std::vector<glm::vec3>(width)),
@@ -69,8 +98,8 @@ class DirectOasis {
         Console console;
         Shader  main_shader;
         
-        int fps, frames, ticks;
-        float elapsed;
+        int fps = 0, frames = 0, ticks = 0;
+        float elapsed = 0.f;
 
     public:
 
@@ -82,6 +111,11 @@ class DirectOasis {
             main_shader.addObject(obj);
         }
 
+        void text(int x, int y, std::wstring text, std::wstring color = L""){
+            for (int i = 0; i < text.size(); ++i) {
+                console.pixel(x + i, y, Pixel(std::wstring{} + text[i], color));
+            }
+        }
 
         void setup(bool lockCursor = true, bool hideCursor = true){
             auto &term = console.get_terminal();
@@ -173,6 +207,10 @@ class DirectOasis {
 
         Keyboard &getANSIKeyboard(){
             return ansi_kboard;
+        }
+
+        int getFPS(){
+            return fps;
         }
 
         DirectOasis(

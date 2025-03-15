@@ -93,8 +93,6 @@ class Shader {
             auto ray_casting = [&](
                 Ray& ray, Camera& camera, std::vector<Object>& objects
             ){
-                
-
                 auto castRay = [&](Ray &lray){
                     lray.minIt = glm::vec2{MAX_DIST};
                     for (const auto& object : objects) {

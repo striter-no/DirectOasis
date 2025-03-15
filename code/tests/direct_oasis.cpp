@@ -116,10 +116,12 @@ int main(){
                         -sin(tick*0.005), 
                         0.75f
                     ));
-                buffer.shade(shader);
+                // buffer.shade(shader);
+                buffer.multithread_shade(shader, 8 * 4);
             },
             [&](){
                 buffer.draw(app.getConsole());
+                app.text(0, 0, L"FPS: " + std::to_wstring(app.getFPS()), conv(colors::Fore.white));
             }
         );
     }
