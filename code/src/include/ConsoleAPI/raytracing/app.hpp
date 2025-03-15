@@ -177,7 +177,7 @@ class DirectOasis {
             return main_shader.light;
         }
 
-        int getTicks(){
+        const int &getTicks(){
             return ticks;
         }
 
@@ -209,7 +209,7 @@ class DirectOasis {
             return ansi_kboard;
         }
 
-        int getFPS(){
+        const int &getFPS(){
             return fps;
         }
 
