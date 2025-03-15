@@ -19,13 +19,12 @@ sourceDir = variables.sourcedDir
 mainDir = variables.mainDir
 
 [libraries]
-dllsToLink = (pthread, X11, Xfixes) 
+dllsToLink = (pthread, X11, Xfixes, GL)
 # boost_system, boost_thread
 
 #libDir = /usr/lib/aarch64-linux-gnu/
 # OpenCL
-# dllsToLink = (GL, glfw, GLEW, wayland-client)
 
 [env]
-# vars = {LIBGL_ALWAYS_SOFTWARE:true, GALLIUM_DRIVER:llvmpipe}
+vars = {LIBGL_ALWAYS_SOFTWARE:true, GALLIUM_DRIVER:llvmpipe}
 # vars = {MESA_GL_VERSION_OVERRIDE:3.1}

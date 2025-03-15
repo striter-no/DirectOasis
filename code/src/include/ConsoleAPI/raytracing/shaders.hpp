@@ -38,7 +38,6 @@ class Shader {
         std::unordered_map<std::string, glm::vec4> vec4_uniforms;
         std::unordered_map<std::string, glm::mat2> mat2_uniforms;
 
-
     public:
         DirectionalLight light;
 
