@@ -3,6 +3,7 @@
 #include "init.hpp"
 #include "material.hpp"
 
+
 struct Ray {
     glm::vec2 minIt;
     glm::vec2 it;

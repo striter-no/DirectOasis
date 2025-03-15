@@ -2,6 +2,7 @@
 
 #include "init.hpp"
 #include "figures.hpp"
+#include "mesh.hpp"
 
 void Sphere::intersect(
     Ray& ray
@@ -105,5 +106,13 @@ void Triangle::intersect(
         ray.intersectPoint = ray.origin + ray.direction * ray.it.x;
         ray.intersectMaterial = this->material;
         ray.intersectColor = this->color;
+    }
+}
+
+void Mesh::intersect(
+    Ray &ray
+) const {
+    for (auto &mtri: this->triangles) {
+        mtri.raycast_form.intersect(ray);
     }
 }

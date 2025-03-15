@@ -49,6 +49,13 @@ int main(){
         )
     });
 
+    app.object({
+        std::make_shared<Mesh>(
+            "./assets/monkey.obj",
+            common, cyan
+        )
+    });
+
     app.setup();
 
     auto &shader   = app.getMainShader();
