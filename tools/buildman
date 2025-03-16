@@ -1,7 +1,7 @@
 import os
 import argparse
 
-clone_prj   = lambda author, prj: f"mkdir -p ~/.buildman/projects && cd ~/.buildman/projects && git clone https://github.com/{author}/{prj}.git"
+clone_prj   = lambda author, prj: f"mkdir -p $HOME/.buildman/projects && cd ~/.buildman/projects && git clone https://github.com/{author}/{prj}.git"
 compile_cmd = lambda file: f"./tools/cmp --file={file} --only-run=true!"
 run_cmd     = lambda file: f"./tools/cmp --file={file} --only-run=true"
 
@@ -13,9 +13,14 @@ if __name__ == "__main__":
     parser.add_argument("--run", help="File to run", required=False, action="store_true")
 
     args = parser.parse_args()
+    print(f"$HOME/.buildman/projects/{args.project}")
+    if os.system(f"ls $HOME/.buildman/projects/{args.project}") == 0:
+        print(f"removing ")
+        os.system(f"rm -rf $HOME/.buildman/projects/{args.project}")
+
     os.system(clone_prj(args.author, args.project))
 
     if len(args.compile) != 0:
-        os.system(f"cd ~/.buildman/projects/{args.project} && {compile_cmd(args.compile)}")
+        os.system(f"cd $HOME/.buildman/projects/{args.project} && {compile_cmd(args.compile)}")
     if args.run:
-        os.system(f"cd ~/.buildman/projects/{args.project} && {run_cmd(args.compile)}")
+        os.system(f"cd $HOME/.buildman/projects/{args.project} && {run_cmd(args.compile)}")

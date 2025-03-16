@@ -365,6 +365,7 @@ class Processor:
 
 if __name__ == '__main__':
     system = System()
+    os.makedirs("out", exist_ok=True)
     with open(f'{os.path.dirname(__file__)}/config.where') as f:
         path = f.read().strip()
     config = ConfigFile(path)
