@@ -19,7 +19,7 @@ sourceDir = variables.sourcedDir
 mainDir = variables.mainDir
 
 [libraries]
-dllsToLink = (pthread, X11, Xfixes, GL, EGL, mali)
+dllsToLink = (pthread, X11, Xfixes, GL, EGL)
 # boost_system, boost_thread
 
 #libDir = /usr/lib/aarch64-linux-gnu/

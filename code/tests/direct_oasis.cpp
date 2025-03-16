@@ -26,11 +26,16 @@ int main(){
 
     DirectOasis app(GRAPHICS_TYPE::RAY_CASTING);
 
-    app.object({
-        std::make_shared<Sphere>(
-            glm::vec3(-5.0f, 0.0f, 0.0f), 1.0f, 
-            transp, red
-    )});
+    // for (int x = 0; x < 32; ++x) {
+    //     for (int y = 0; y < 32; ++y) {
+    //         app.object({
+    //             std::make_shared<Box>(
+    //                 glm::vec3(x, y, 0.0f), 
+    //                 glm::vec3{1.0f}, 
+    //                 common, glm::vec3(eml::uniform(0, 1), eml::uniform(0, 1), eml::uniform(0, 1))
+    //         )});
+    //     }
+    // }
 
     app.object({
         std::make_shared<Plane>(
@@ -39,15 +44,15 @@ int main(){
         )
     });
 
-    app.object({
-        std::make_shared<Triangle>(
-            glm::vec3{1.f, 1.f, 0.1f},
-            glm::vec3{0.f, 1.f, 0.1f},
-            glm::vec3{0.f, 0.f, 0.1f},
+    // app.object({
+    //     std::make_shared<Triangle>(
+    //         glm::vec3{1.f, 1.f, 0.1f},
+    //         glm::vec3{0.f, 1.f, 0.1f},
+    //         glm::vec3{0.f, 0.f, 0.1f},
 
-            common, cyan
-        )
-    });
+    //         common, cyan
+    //     )
+    // });
 
     app.object({
         std::make_shared<Mesh>(
@@ -65,7 +70,7 @@ int main(){
     auto [ww, wh]  = app.getWindowSize();
     auto [sw, sh]  = app.getSimbolsSize();
     DirectBuffer buffer(sw, sh, 0.5625);
-    while (!app.needStop()){
+    while (!app.needStop() && !keyboard.isKeyPressed(L"Q")){
         app.update(
             [&](){
 
@@ -117,8 +122,8 @@ int main(){
                         -sin(tick*0.005), 
                         0.75f
                     ));
-                // buffer.shade(shader);
-                buffer.multithread_shade(shader, 8 * 4);
+                buffer.shade(shader);
+                // buffer.multithread_shade(shader, 8 * 4);
             },
             [&](){
                 buffer.narrow_draw(app.getConsole());

@@ -1,0 +1,21 @@
+import os
+import argparse
+
+clone_prj   = lambda author, prj: f"mkdir -p ~/.buildman/projects && cd ~/.buildman/projects && git clone https://github.com/{author}/{prj}.git"
+compile_cmd = lambda file: f"./tools/cmp --file={file} --only-run=true!"
+run_cmd     = lambda file: f"./tools/cmp --file={file} --only-run=true"
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--author", help="The author of the project on GitHub", required=True)
+    parser.add_argument("--project", help="The project on GitHub", required=True)
+    parser.add_argument("--compile", help="File to compile", required=False)
+    parser.add_argument("--run", help="File to run", required=False, action="store_true")
+
+    args = parser.parse_args()
+    os.system(clone_prj(args.author, args.project))
+
+    if len(args.compile) != 0:
+        os.system(f"cd ~/.buildman/projects/{args.project} && {compile_cmd(args.compile)}")
+    if args.run:
+        os.system(f"cd ~/.buildman/projects/{args.project} && {run_cmd(args.compile)}")
