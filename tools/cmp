@@ -194,7 +194,7 @@ class System:
 
         self.compilerScope.data["mode"] = "none"
         self.compilerScope.data["standart"] = "none"
-        self.compilerScope.data["outputDir"] = "none"
+        self.compilerScope.data['outputDir'] = "none"
         self.compilerScope.data["warnings"] = "true"
         self.compilerScope.data["runAfterCompiling"] = "false"
         self.compilerScope.data["optimize"] = "0"
@@ -306,10 +306,10 @@ class System:
             self.librariesScope.data["libDir"],
             self.dependenciesScope.data["mainDir"]
         )
-        if self.compilerScope.data["outputDir"] != "none":
+        if self.compilerScope.data['outputDir'] != "none":
             if os.path.exists(f"{self.compilerScope.data['outputDir']}/{binName}"):
                 os.remove(f"{self.compilerScope.data['outputDir']}/{binName}")
-            sht.move(f"./{binName}", f"{self.compilerScope.data["outputDir"]}")
+            sht.move(f"./{binName}", f"{self.compilerScope.data['outputDir']}")
 
         if self.compilerScope.data["runAfterCompiling"] == "true":
             a = ' '.join([v for v in processListOrStr(self.envScope.data["vars"])]) + f"{self.compilerScope.data['outputDir']}/{binName}"
