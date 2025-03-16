@@ -307,7 +307,7 @@ class System:
             self.dependenciesScope.data["mainDir"]
         )
         if self.compilerScope.data["outputDir"] != "none":
-            if os.path.exists(f"{self.compilerScope.data["outputDir"]}/{binName}"):
+            if os.path.exists(f"{self.compilerScope.data['outputDir']}/{binName}"):
                 os.remove(f"{self.compilerScope.data['outputDir']}/{binName}")
             sht.move(f"./{binName}", f"{self.compilerScope.data["outputDir"]}")
 
