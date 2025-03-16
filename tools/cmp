@@ -280,7 +280,8 @@ class System:
             a = ' '.join([v for v in processListOrStr(self.envScope.data["vars"])]) + f"{self.compilerScope.data['outputDir']}/{binName}"
             print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{a}{Fore.RESET}")
             print(f"-- starting {binName} ...")
-            code = os.system(f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])} {self.compilerScope.data['outputDir']}/{binName}")
+            b = ' '.join([v for v in processListOrStr(self.envScope.data["vars"])])
+            code = os.system(f"{b} {self.compilerScope.data['outputDir']}/{binName}")
             if code!= 0:
                 print(f"-- {binName} finished with code {code}")
             else:
@@ -314,7 +315,8 @@ class System:
             a = ' '.join([v for v in processListOrStr(self.envScope.data["vars"])]) + f"{self.compilerScope.data['outputDir']}/{binName}"
             print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{a}{Fore.RESET}")
             print(f"-- starting {binName} ...")
-            code = os.system(f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])} {self.compilerScope.data['outputDir']}/{binName}")
+            b = ' '.join([v for v in processListOrStr(self.envScope.data["vars"])])
+            code = os.system(f"{b} {self.compilerScope.data['outputDir']}/{binName}")
             if code!= 0:
                 print(f"-- {binName} finished with code {code}")
             else:
