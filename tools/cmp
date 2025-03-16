@@ -277,8 +277,8 @@ class System:
         binName = self.clarg.data["file"].replace('.cpp', '')
 
         if self.clarg.data["only-run"] == "true" and os.path.exists(f"{self.compilerScope.data['outputDir']}/{binName}"):
-            
-            print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])}{self.compilerScope.data['outputDir']}/{binName}"}{Fore.RESET}")
+            a = ' '.join([v for v in processListOrStr(self.envScope.data["vars"])]) + f"{self.compilerScope.data['outputDir']}/{binName}"
+            print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{a}{Fore.RESET}")
             print(f"-- starting {binName} ...")
             code = os.system(f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])} {self.compilerScope.data['outputDir']}/{binName}")
             if code!= 0:
@@ -311,7 +311,8 @@ class System:
             sht.move(f"./{binName}", f"{self.compilerScope.data["outputDir"]}")
 
         if self.compilerScope.data["runAfterCompiling"] == "true":
-            print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])}{self.compilerScope.data['outputDir']}/{binName}"}{Fore.RESET}")
+            a = ' '.join([v for v in processListOrStr(self.envScope.data["vars"])]) + f"{self.compilerScope.data['outputDir']}/{binName}"
+            print(f"{Fore.YELLOW}[RUN] Executing command: {Fore.BLUE}{a}{Fore.RESET}")
             print(f"-- starting {binName} ...")
             code = os.system(f"{' '.join([v for v in processListOrStr(self.envScope.data["vars"])])} {self.compilerScope.data['outputDir']}/{binName}")
             if code!= 0:
