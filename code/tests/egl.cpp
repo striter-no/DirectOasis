@@ -1,40 +1,52 @@
-#include <EGL/egl.h>
-#include <GL/gl.h>
+#include <ConsoleAPI/raytracing/app.hpp>
+#include <ConsoleAPI/gpu_graphics/renderer.hpp>
 
-const EGLint configAttribs[] = {
-    EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-    EGL_BLUE_SIZE, 8,
-    EGL_GREEN_SIZE, 8,
-    EGL_RED_SIZE, 8,
-    EGL_DEPTH_SIZE, 8,
-    EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-    EGL_NONE
-};    
+int main(){
+    DirectOasis app(GRAPHICS_TYPE::RAY_TRACING);
+    auto [sw, sh] = app.getSimbolsSize();
+    app.setup(false, false);
+    
+    DirectGL       gl(sw, sh);
+    DirectGLShader shader("./code/glsl/ConsoleAPI/general");
+    gl.setup();
+    
+    Renderer       renderer(shader, sw, sh);
 
-const int pbufferWidth = 900;
-const int pbufferHeight = 700;
+    const auto &tick = app.getTicks();
+    auto &console = app.getConsole();
+    while (!app.needStop()){
+        app.update(
+            [&](){
+                ;
+            },
+            [&](){
+                Image image = renderer.draw([&](DirectGLShader& shader){});
+                for (int y = 0; y < sh; y++){ 
+                    for (int x = 0; x < sw; x++){
+                        if(!console.pixel(x, y, Pixel(" ", 
+                            colors::rgb_back(
+                                image.pixels[y][x].r * 255.f, 
+                                image.pixels[y][x].g * 255.f, 
+                                image.pixels[y][x].b * 255.f
+                            ), true
+                        ), false)) throw std::runtime_error("Draw error on " + std::to_string(x) + ", " + std::to_string(y));
+                    }
+                }
 
-const EGLint pbattr[] = {
-    EGL_WIDTH, pbufferWidth,
-    EGL_HEIGHT, pbufferHeight,
-    EGL_NONE,
-};
+                auto &samplePixel = console.get_pixel(0, 0);
+                app.text(0, 4, "Pixel: " + samplePixel.nrw_color.substr(1), colors::Fore.white);
 
-int main(int argc, char *argv[]){
-    EGLDisplay eglDpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    EGLint major, minor;
-    eglInitialize(eglDpy, &major, &minor);
-    EGLint numConfigs;
-    EGLConfig eglCfg;
+                app.text(0, 0, 
+                    "FPS: " + std::to_string(app.getFPS(app.getConsoleElapsed())) + " (" + std::to_string(app.getConsoleElapsed()) + " milliseconds)", 
+                    colors::Fore.white
+                );
 
-    eglChooseConfig(eglDpy, configAttribs, &eglCfg, 1, &numConfigs);
-    EGLSurface eglSurf = eglCreatePbufferSurface(eglDpy, eglCfg, pbattr);
-    eglBindAPI(EGL_OPENGL_API);
-    EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT, 0);    
-    eglMakeCurrent(eglDpy, eglSurf, eglSurf, eglCtx);
+                app.text(0, 1, "Resolution: " + std::to_string(sw) + " " + std::to_string(sh), colors::Fore.white);
+                app.text(0, 2, "Ticks: " + std::to_string(tick), colors::Fore.white);
+            }, 0.f, true, false
+        );
+    }
 
-    ; // OpenGL Stuff
-
-    eglTerminate(eglDpy);
+    gl.finish();
     return 0;
 }

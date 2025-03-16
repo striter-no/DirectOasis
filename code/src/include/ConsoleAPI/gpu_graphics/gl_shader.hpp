@@ -9,7 +9,7 @@
 #include <utils/files.hpp>
 #include <utils/vector.hpp>
 
-class Shader {
+class DirectGLShader {
 
         uint compileShader(uint type, std::string source){
             uint id = glCreateShader(type);
@@ -93,11 +93,6 @@ class Shader {
             glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
         }
 
-        void uniform(std::string name, glm::vec2 value){
-            int location = glGetUniformLocation(program, name.c_str());
-            glUniform2fv(location, 1, &value[0]);
-        }
-
         void uniform(std::string name, int value){
             int location = glGetUniformLocation(program, name.c_str());
             glUniform1i(location, value);
@@ -108,14 +103,14 @@ class Shader {
             glUniform1f(location, value);
         }
         
-        Shader(std::string path){
+        DirectGLShader(std::string path){
             program = loadShader(path);
         }
 
-        Shader(std::string vert, std::string frag){
+        DirectGLShader(std::string vert, std::string frag){
             program = loadShader(vert, frag);
         }
 
-        Shader(){}
-        ~Shader(){}
+        DirectGLShader(){}
+        ~DirectGLShader(){}
 };

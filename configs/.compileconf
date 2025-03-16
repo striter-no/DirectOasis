@@ -10,7 +10,7 @@ standart = c++23
 warnings = false
 headersDir = variables.headersDir
 optimize = 3
-runAfterCompiling = true
+runAfterCompiling = false
 outputDir = ./out
 
 [dependencies]
@@ -19,7 +19,7 @@ sourceDir = variables.sourcedDir
 mainDir = variables.mainDir
 
 [libraries]
-dllsToLink = (pthread, X11, Xfixes, GL)
+dllsToLink = (pthread, X11, Xfixes, GL, EGL, mali)
 # boost_system, boost_thread
 
 #libDir = /usr/lib/aarch64-linux-gnu/

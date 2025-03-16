@@ -61,6 +61,7 @@ int main(){
     auto &shader   = app.getMainShader();
     auto &mouse    = app.getWinMouse();
     auto &keyboard = app.getANSIKeyboard();
+    auto &tick     = app.getTicks();
     auto [ww, wh]  = app.getWindowSize();
     auto [sw, sh]  = app.getSimbolsSize();
     DirectBuffer buffer(sw, sh, 0.5625);
@@ -109,7 +110,7 @@ int main(){
 
                 shader.setUniform("cam_pos", campos);
 
-                auto tick = app.getTicks();
+                
                 app.getLight()
                     .direction = glm::normalize(
                         glm::vec3(cos(tick*0.005), 
@@ -120,9 +121,12 @@ int main(){
                 buffer.multithread_shade(shader, 8 * 4);
             },
             [&](){
-                buffer.draw(app.getConsole());
-                app.text(0, 0, L"FPS: " + std::to_wstring(app.getFPS()), conv(colors::Fore.white));
-            }
+                buffer.narrow_draw(app.getConsole());
+
+                app.text(0, 0, "FPS: " + std::to_string(app.getFPS(app.getAllElapsed())) + " (" + std::to_string(app.getAllElapsed()) + " milliseconds)", colors::Fore.white);
+                app.text(0, 1, "Resolution: " + std::to_string(sw) + " " + std::to_string(sh), colors::Fore.white);
+                app.text(0, 2, "Ticks: " + std::to_string(tick), colors::Fore.white);
+            }, 0.f, true, false
         );
     }
 

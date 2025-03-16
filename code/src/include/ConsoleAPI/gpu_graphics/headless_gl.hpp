@@ -4,7 +4,7 @@
 #include <GLES3/gl3.h>
 #include <GL/gl.h>
 
-class GLRenderer {
+class DirectGL {
         const EGLint *getConfig(
             int blue_size,
             int green_size,
@@ -63,7 +63,7 @@ class GLRenderer {
             eglTerminate(eglDpy);
         }
 
-        GLRenderer(
+        DirectGL(
             int width,
             int height,
             int blue_size = 8,
@@ -78,6 +78,6 @@ class GLRenderer {
            depth_size(depth_size) 
         {}
 
-        GLRenderer(){}
-        ~GLRenderer(){}
+        DirectGL(){}
+        ~DirectGL(){}
 };

@@ -43,6 +43,34 @@ class DirectBuffer {
             }
         }
 
+        void narrow_draw(Console &console, bool by_rays = true, int start_x = 0, int start_y = 0){
+            if (!by_rays){
+
+                for (int y = start_y; y < colors.size(); ++y) {
+                    for (int x = start_x; x < colors[0].size(); ++x) {
+                        console.pixel(x, y, Pixel(
+                            " ", colors::rgb_back(colors[y][x].r * 255, colors[y][x].g * 255, colors[y][x].b * 255) )
+                        );
+                    }
+                }
+            } else if (by_rays){
+                // throw std::runtime_error("Rays is not empty: " + std::to_string(rays.size()) + "x" + std::to_string(rays[0].size()));
+                for (int y = start_y; y < rays.size(); ++y) {
+                    for (int x = start_x; x < rays[0].size(); ++x) {
+                        console.pixel(x, y, Pixel(
+                            " ", colors::rgb_back(
+                                rays[y][x].color.r * 255.f, 
+                                rays[y][x].color.g * 255.f, 
+                                rays[y][x].color.b * 255.f
+                            )
+                        ));
+                    }
+                }
+            } else {
+                throw std::runtime_error("No data to draw");
+            }
+        }
+
         void shade(Shader &shader){
             int width = rays[0].size();
             int height = rays.size();
@@ -105,10 +133,11 @@ class DirectOasis {
         float console_elapsed = 0.f;
         float system_elapsed  = 0.f;
 
+        bool force_stop = false;
     public:
 
         bool needStop(){
-            return console.get_terminal().isCtrlCPressed();
+            return console.get_terminal().isCtrlCPressed() || force_stop;
         }
 
         void object(Object obj){
@@ -169,10 +198,20 @@ class DirectOasis {
             // ansi_mouse.pollEvents();
             system_elapsed = extra::getChronoElapsed(begin);
             auto user_begin = extra::getChronoTimeNow();
-            user_update();
+            try{
+                user_update();
+            } catch (const std::exception &e){
+                std::cerr << "[DirectOasis] Error during user update function: " << e.what() << std::endl;
+                force_stop = true;
+            }
 
             console.clear();
-            user_draw();
+            try{
+                user_draw();
+            } catch (const std::exception &e){
+                std::cerr << "[DirectOasis] Error during user draw function: " << e.what() << std::endl;
+                force_stop = true;
+            }
             user_elapsed = extra::getChronoElapsed(user_begin);
             auto console_begin = extra::getChronoTimeNow();
 
