@@ -15,7 +15,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(f"$HOME/.buildman/projects/{args.project}")
     if os.system(f"ls $HOME/.buildman/projects/{args.project}") == 0:
-        print(f"removing ")
         os.system(f"rm -rf $HOME/.buildman/projects/{args.project}")
 
     os.system(clone_prj(args.author, args.project))

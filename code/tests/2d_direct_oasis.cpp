@@ -5,10 +5,13 @@ int main(){
 
     app.setup(false, false);
 
-    const auto &tick = app.getTicks();
-    auto &console = app.getConsole();
-    auto [sw, sh] = app.getSimbolsSize();
-    while (!app.needStop()){
+    auto &mouse    = app.getWinMouse();
+    auto &keyboard = app.getANSIKeyboard();
+    auto &tick     = app.getTicks();
+    auto &console  = app.getConsole();
+    auto [ww, wh]  = app.getWindowSize();
+    auto [sw, sh]  = app.getSimbolsSize();
+    while (!app.needStop() && !keyboard.isKeyPressed(L"Q")){
         app.update(
             [&](){
                 ;
@@ -39,6 +42,6 @@ int main(){
             }, 0.f, true, false
         );
     }
-
+    app.finish();
     return 0;
 }
