@@ -28,6 +28,30 @@ enum class CtrlKey {
     C, Z, X, R, S, Q, V, B, N
 };
 
+// Конвертер wchar_t → UTF-8 с использованием iconv
+std::string wideToUTF8(const std::wstring& wstr) {
+    // std::cout << 1 << std::endl;
+    iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
+    if (cd == (iconv_t)-1) {
+        throw std::runtime_error("iconv_open failed");
+    }
+
+    size_t inbytes = wstr.size() * sizeof(wchar_t);
+    char* inbuf = (char*)wstr.data();
+    std::string result(wstr.size() * 4, '\0');
+    char* outbuf = result.data();
+    size_t outbytes = result.size();
+
+    if (iconv(cd, &inbuf, &inbytes, &outbuf, &outbytes) == (size_t)-1) {
+        iconv_close(cd);
+        throw std::runtime_error("Conversion error");
+    }
+
+    iconv_close(cd);
+    result.resize(result.size() - outbytes);
+    return result;
+}
+
 class Terminal {
     private:
         int width, height;
@@ -41,31 +65,7 @@ class Terminal {
         #else
             struct termios originalTermios;
             int fdOut;
-        #endif
-
-        // Конвертер wchar_t → UTF-8 с использованием iconv
-        std::string wideToUTF8(const std::wstring& wstr) {
-            // std::cout << 1 << std::endl;
-            iconv_t cd = iconv_open("UTF-8", "WCHAR_T");
-            if (cd == (iconv_t)-1) {
-                throw std::runtime_error("iconv_open failed");
-            }
-
-            size_t inbytes = wstr.size() * sizeof(wchar_t);
-            char* inbuf = (char*)wstr.data();
-            std::string result(wstr.size() * 4, '\0');
-            char* outbuf = result.data();
-            size_t outbytes = result.size();
-
-            if (iconv(cd, &inbuf, &inbytes, &outbuf, &outbytes) == (size_t)-1) {
-                iconv_close(cd);
-                throw std::runtime_error("Conversion error");
-            }
-
-            iconv_close(cd);
-            result.resize(result.size() - outbytes);
-            return result;
-        }
+        #endif        
 
         bool isCtrlPressedWin(CtrlKey key) {
             #ifdef _WIN32
@@ -300,7 +300,25 @@ class Terminal {
                 ssize_t result = write(fdOut, converted_str.c_str(), converted_str.size());
                 
                 if(result == -1) 
-                    throw std::runtime_error("Write error");
+                    throw std::runtime_error("Write error (wstring)");
+            #endif
+        }
+
+        void draw(std::string &&data){
+            draw(data);
+        }
+
+        void draw(std::string &data){
+            #ifdef _WIN32
+                DWORD written;
+                if(!WriteConsole(hConsoleOut, data.c_str(), static_cast<DWORD>(length), &written, nullptr)) {
+                    throw std::runtime_error("Write console error");
+                }
+            #else
+                ssize_t result = write(fdOut, data.c_str(), data.size());
+                
+                if(result == -1) 
+                    throw std::runtime_error("Write error (string)");
             #endif
         }
 

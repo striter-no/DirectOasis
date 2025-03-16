@@ -145,7 +145,7 @@ int main(){
     auto [w, h] = winmouse.getSize();
     float mx = 0, my = 0;
     glm::vec3 campos = {0, 0, 0};
-    auto begin = extra::getChornoTimeNow();
+    auto begin = extra::getChronoTimeNow();
     std::vector<std::vector<Ray>> prev_rays;
     while(!term.isCtrlCPressed()){
         console.clear();
@@ -156,7 +156,7 @@ int main(){
         }
 
         std::vector<std::vector<Ray>> rays;
-        begin = extra::getChornoTimeNow();
+        begin = extra::getChronoTimeNow();
         for (int y = 0; y < console.height; ++y) {
             std::vector<Ray> row;
             for (int x = 0; x < console.width; ++x) {

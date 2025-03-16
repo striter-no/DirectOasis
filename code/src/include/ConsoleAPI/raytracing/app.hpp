@@ -99,7 +99,11 @@ class DirectOasis {
         Shader  main_shader;
         
         int fps = 0, frames = 0, ticks = 0;
-        float elapsed = 0.f;
+        
+        float all_elapsed     = 0.f;
+        float user_elapsed    = 0.f;
+        float console_elapsed = 0.f;
+        float system_elapsed  = 0.f;
 
     public:
 
@@ -114,6 +118,12 @@ class DirectOasis {
         void text(int x, int y, std::wstring text, std::wstring color = L""){
             for (int i = 0; i < text.size(); ++i) {
                 console.pixel(x + i, y, Pixel(std::wstring{} + text[i], color));
+            }
+        }
+
+        void text(int x, int y, std::string text, std::string color = ""){
+            for (int i = 0; i < text.size(); ++i) {
+                console.pixel(x + i, y, Pixel(std::string{} + text[i], color));
             }
         }
 
@@ -148,29 +158,33 @@ class DirectOasis {
         void update(
             std::function<void()> user_update,
             std::function<void()> user_draw,
-            float frame_sleep = 5000.f
+            float frame_sleep = 5000.f,
+            bool narrow_draw = false,
+            bool crossing_draw = false
         ){
-            auto begin = extra::getChornoTimeNow();
-
-            if(elapsed >= 1000){
-                fps = frames;
-                elapsed = 0; 
-                frames = 0;
-            }
+            auto begin = extra::getChronoTimeNow();
 
             win_mouse.pollEvents();
-            // ansi_mouse.pollEvents();
             ansi_kboard.pollEvents();
+            // ansi_mouse.pollEvents();
+            system_elapsed = extra::getChronoElapsed(begin);
+            auto user_begin = extra::getChronoTimeNow();
             user_update();
-    
+
             console.clear();
             user_draw();
-            console.draw();
+            user_elapsed = extra::getChronoElapsed(user_begin);
+            auto console_begin = extra::getChronoTimeNow();
+
+            if (narrow_draw) console.narrow_draw(crossing_draw);
+            else console.draw();
+
+            console_elapsed = extra::getChronoElapsed(console_begin);
 
             usleep(std::max(0.f, frame_sleep - extra::getChronoElapsed<std::chrono::microseconds>(begin)));
             frames++;
             ticks++;
-            elapsed += extra::getChronoElapsed(begin);
+            all_elapsed = extra::getChronoElapsed(begin);
         }
 
         DirectionalLight &getLight(){
@@ -209,8 +223,30 @@ class DirectOasis {
             return ansi_kboard;
         }
 
-        const int &getFPS(){
-            return fps;
+        const int &getFrames(){
+            return frames;
+        }
+
+        const float &getAllElapsed(){
+            return all_elapsed;
+        }
+
+        const float &getUserElapsed(){
+            return user_elapsed;
+        }
+
+        const float &getConsoleElapsed(){
+            return console_elapsed;
+        }
+
+        const float &getSystemElapsed(){
+            return system_elapsed;
+        }
+
+        int getFPS(float dt){
+            if (dt == 0.f) return -1;
+
+            return round(1000.f / dt);
         }
 
         DirectOasis(

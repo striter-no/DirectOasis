@@ -21,20 +21,22 @@ int main(){
                             ny = (float)y / sh
                         ;
 
-                        console.pixel(x, y, Pixel(L" ", conv(
+                        if(!console.pixel(x, y, Pixel(" ", 
                             colors::rgb_back(
                                 nx * 255, 
                                 ny * 255, 
                                 (sin(tick/10*M_PI)+1) * 0.5 * 255
-                            )
-                        )));
+                            ), true
+                        ), false)) throw std::runtime_error("Draw error on " + std::to_string(x) + ", " + std::to_string(y));
                     }
                 }
 
-                app.text(0, 0, L"FPS: " + std::to_wstring(app.getFPS()), conv(colors::Fore.white));
-                app.text(0, 1, L"Resolution: " + std::to_wstring(sw) + L" " + std::to_wstring(sh), conv(colors::Fore.white));
-                app.text(0, 2, L"Ticks: " + std::to_wstring(tick), conv(colors::Fore.white));
-            }, 0.f
+                app.text(0, 4, "Pixel: " + std::to_string((4 / sw) * 255) + " " + std::to_string((4 / sh) * 255) + " " + std::to_string((sin(tick/10*M_PI)+1)* 0.5 * 255) , colors::Fore.white);
+
+                app.text(0, 0, "FPS: " + std::to_string(app.getFPS(app.getConsoleElapsed())) + " (" + std::to_string(app.getConsoleElapsed()) + " milliseconds)", colors::Fore.white);
+                app.text(0, 1, "Resolution: " + std::to_string(sw) + " " + std::to_string(sh), colors::Fore.white);
+                app.text(0, 2, "Ticks: " + std::to_string(tick), colors::Fore.white);
+            }, 0.f, true, false
         );
     }
 
